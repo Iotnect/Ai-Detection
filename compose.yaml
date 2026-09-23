@@ -4,3 +4,18 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.1
+    restart: unless-stopped
+    environment:
+      MTX_RTSPTRANSPORTS: tcp
+      MTX_API: "yes"
+      MTX_APIADDRESS: ":9997"
+      MTX_WEBRTCADDITIONALHOSTS: "${MEDIAMTX_WEBRTC_HOSTS:-localhost}"
+    ports:
+      - "127.0.0.1:8554:8554"
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:8889:8889"
+      - "127.0.0.1:9997:9997"
+      - "8189:8189/udp"
