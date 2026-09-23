@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Activity, Maximize2, VideoOff, X } from "lucide-react";
+import HlsPlayer from "@/components/cctv/HlsPlayer";
+import { useDetectionStream } from "@/hooks/useDetectionStream";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const liveHlsUrl = process.env.NEXT_PUBLIC_HLS_URL;
 
 const cameraFeeds = [
   { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah", src: "camera-1.v2.mp4" },
-  { id: 2, name: "MBS-KDN-C2", location: "Sungai Taman Ros Merah", src: "camera-2.v2.mp4" },
-  { id: 3, name: "MBS-KDN-C3", location: "Sungai Taman Ros Merah", src: "camera-3.v2.mp4" },
-  { id: 4, name: "MBS-KDN-C4", location: "Sungai Taman Ros Merah", src: "camera-4.v2.mp4" },
 ];
 
 const events = [
@@ -46,10 +46,11 @@ const events = [
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { detections, connectionState } = useDetectionStream();
   const [selectedCamera, setSelectedCamera] = useState<
     (typeof cameraFeeds)[number] | null
   >(null);
-  const canViewLiveFeed = user?.role === "admin";
+  const canViewLiveFeed = Boolean(user);
 
   useEffect(() => {
     if (!selectedCamera) return;
@@ -78,18 +79,18 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Demo camera playback grid */}
+      {/* Single production camera */}
       <section className="space-y-3" aria-labelledby="camera-playback-heading">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 id="camera-playback-heading" className="font-semibold text-white">
-              Camera Playback
+              Live Camera
             </h2>
             <p className="text-sm text-slate-400">
-              Recorded footage for dashboard demonstration
+              Real-time monitoring from MBS-KDN-C1
             </p>
           </div>
-          <span className="text-xs text-slate-500 whitespace-nowrap">4 cameras</span>
+          <span className="text-xs text-slate-500 whitespace-nowrap">1 camera</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -101,23 +102,32 @@ export default function DashboardPage() {
               <div className="aspect-video bg-black relative">
                 {canViewLiveFeed ? (
                   <>
-                    <video
-                      className="h-full w-full object-cover cursor-zoom-in"
-                      src={`${basePath}/${camera.src}`}
-                      aria-label={`${camera.name} recorded camera footage`}
-                      onClick={() => setSelectedCamera(camera)}
-                      autoPlay
-                      controls
-                      loop
-                      muted
-                      playsInline
-                      preload="metadata"
-                    />
+                    {liveHlsUrl ? (
+                      <HlsPlayer
+                        className="h-full w-full object-cover cursor-zoom-in"
+                        src={liveHlsUrl}
+                        ariaLabel={`${camera.name} live camera footage`}
+                        onClick={() => setSelectedCamera(camera)}
+                      />
+                    ) : (
+                      <video
+                        className="h-full w-full object-cover cursor-zoom-in"
+                        src={`${basePath}/${camera.src}`}
+                        aria-label={`${camera.name} recorded camera footage`}
+                        onClick={() => setSelectedCamera(camera)}
+                        autoPlay
+                        controls
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    )}
 
                     <div className="absolute top-3 left-3 flex items-center gap-2 rounded-md bg-black/65 px-2.5 py-1 pointer-events-none">
                       <span className="w-2 h-2 rounded-full bg-amber-400" />
                       <span className="text-[11px] text-white font-semibold tracking-wide">
-                        DEMO REPLAY
+                        {liveHlsUrl ? "LIVE" : "DEMO REPLAY"}
                       </span>
                     </div>
 
@@ -166,7 +176,9 @@ export default function DashboardPage() {
                 <h2 id="selected-camera-title" className="font-semibold text-white">
                   {selectedCamera.name}
                 </h2>
-                <p className="text-xs text-slate-400">{selectedCamera.location} &middot; Demo replay</p>
+                <p className="text-xs text-slate-400">
+                  {selectedCamera.location} &middot; {liveHlsUrl ? "Live" : "Demo replay"}
+                </p>
               </div>
               <button
                 type="button"
@@ -179,18 +191,27 @@ export default function DashboardPage() {
             </div>
 
             <div className="aspect-video bg-black">
-              <video
-                key={selectedCamera.id}
-                className="h-full w-full object-contain"
-                src={`${basePath}/${selectedCamera.src}`}
-                aria-label={`${selectedCamera.name} enlarged recorded camera footage`}
-                autoPlay
-                controls
-                loop
-                muted
-                playsInline
-                preload="auto"
-              />
+              {liveHlsUrl ? (
+                <HlsPlayer
+                  key={selectedCamera.id}
+                  className="h-full w-full object-contain"
+                  src={liveHlsUrl}
+                  ariaLabel={`${selectedCamera.name} enlarged live camera footage`}
+                />
+              ) : (
+                <video
+                  key={selectedCamera.id}
+                  className="h-full w-full object-contain"
+                  src={`${basePath}/${selectedCamera.src}`}
+                  aria-label={`${selectedCamera.name} enlarged recorded camera footage`}
+                  autoPlay
+                  controls
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -201,10 +222,31 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 mb-4">
           <Activity size={18} className="text-blue-400" />
           <h2 className="font-semibold text-white">Event Log</h2>
+          {connectionState !== "disabled" && (
+            <span
+              className={`ml-auto text-xs ${
+                connectionState === "online" ? "text-emerald-400" : "text-amber-400"
+              }`}
+            >
+              {connectionState === "online" ? "Live" : "Reconnecting"}
+            </span>
+          )}
         </div>
 
         <div className="space-y-3">
-          {events.map((event) => (
+          {(detections.length
+            ? detections.map((detection) => ({
+                id: `${detection.camera_id}-${detection.received_at}`,
+                type: detection.event_type,
+                message: detection.message,
+                time: new Date(detection.timestamp).toLocaleString(),
+                level:
+                  detection.status.toUpperCase() === "NORMAL"
+                    ? "normal"
+                    : "warning",
+              }))
+            : events
+          ).map((event) => (
             <div
               key={event.id}
               className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50"

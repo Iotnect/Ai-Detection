@@ -14,11 +14,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    const authenticatedUser = login(username.trim(), password);
+    const authenticatedUser = await login(username.trim(), password);
     if (authenticatedUser) {
       router.push("/");
     } else {
@@ -72,13 +72,19 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Username</label>
+              <label className="block text-sm text-slate-400 mb-1.5">
+                {process.env.NEXT_PUBLIC_SUPABASE_URL ? "Email" : "Username"}
+              </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition"
-                placeholder="e.g. admin"
+                placeholder={
+                  process.env.NEXT_PUBLIC_SUPABASE_URL
+                    ? "name@company.com"
+                    : "e.g. admin"
+                }
                 required
               />
             </div>
@@ -107,14 +113,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo accounts helper */}
-          <div className="pt-4 border-t border-slate-800">
-            <p className="text-xs text-slate-500 mb-2">Demo accounts:</p>
-            <div className="text-xs text-slate-400 space-y-1">
-              <p>admin / admin123</p>
-              <p>public / public123</p>
+          {!process.env.NEXT_PUBLIC_SUPABASE_URL && (
+            <div className="pt-4 border-t border-slate-800">
+              <p className="text-xs text-slate-500 mb-2">Demo accounts:</p>
+              <div className="text-xs text-slate-400 space-y-1">
+                <p>admin / admin123</p>
+                <p>public / public123</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

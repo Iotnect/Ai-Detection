@@ -5,6 +5,19 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: development
+      MEDIAMTX_PUBLISH_URL: rtsp://mediamtx:8554/mbs-kdn-c1
+    depends_on:
+      - mediamtx
+    ports:
+      - "127.0.0.1:4000:4000"
+    restart: unless-stopped
+
   mediamtx:
     image: bluenviron/mediamtx:1.21.1
     restart: unless-stopped

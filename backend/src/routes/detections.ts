@@ -2,31 +2,19 @@ import { timingSafeEqual } from "node:crypto";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { WebSocket } from "ws";
-import { z } from "zod";
 
+import {
+  getRequestClientId,
+  requireDashboardAuthentication,
+} from "../auth/dashboard-auth.js";
 import { config } from "../config.js";
+import { createDetectionStore } from "../db/detection-store.js";
+import { DetectionSchema, type StoredDetection } from "../domain/detection.js";
 
-const DetectionSchema = z
-  .object({
-    camera_id: z.string().min(1).max(100),
-    raw_y: z.number().finite().nonnegative(),
-    smoothed_y: z.number().finite().nonnegative(),
-    status: z.string().min(1).max(32),
-    timestamp: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-      message: "timestamp must be a valid ISO-8601 date-time",
-    }),
-    message: z.string().min(1).max(500),
-  })
-  .strict();
-
-type Detection = z.infer<typeof DetectionSchema>;
-
-type StoredDetection = Detection & {
-  received_at: string;
-};
-
-const latestDetections = new Map<string, StoredDetection>();
-const dashboardClients = new Set<WebSocket>();
+const detectionStore = createDetectionStore();
+const dashboardClients = new Map<WebSocket, string | undefined>();
+const liveDetections = new Map<string, StoredDetection>();
+const lastPersistedAt = new Map<string, number>();
 
 function secretsMatch(candidate: string, expected: string): boolean {
   const candidateBuffer = Buffer.from(candidate);
@@ -56,34 +44,35 @@ async function requireAiServiceAuthentication(
   }
 }
 
-async function requireDashboardWebSocketAuthentication(
-  request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<FastifyReply | void> {
-  const query = request.query as { token?: string };
-
-  if (
-    typeof query.token !== "string" ||
-    !secretsMatch(query.token, config.dashboardWebSocketSecret)
-  ) {
-    return reply.code(401).send({
-      error: "unauthorized",
-      message: "A valid dashboard WebSocket token is required.",
-    });
-  }
-}
-
 function broadcastDetection(detection: StoredDetection): void {
   const message = JSON.stringify({
     type: "detection",
     data: detection,
   });
 
-  for (const client of dashboardClients) {
-    if (client.readyState === WebSocket.OPEN) {
+  for (const [client, clientId] of dashboardClients) {
+    if (
+      client.readyState === WebSocket.OPEN &&
+      (!clientId || clientId === detection.client_id)
+    ) {
       client.send(message);
     }
   }
+}
+
+async function latestDetections(clientId?: string): Promise<StoredDetection[]> {
+  const persisted = await detectionStore.latest(clientId);
+  const combined = new Map(
+    persisted.map((detection) => [detection.camera_id, detection]),
+  );
+
+  for (const detection of liveDetections.values()) {
+    if (!clientId || detection.client_id === clientId) {
+      combined.set(detection.camera_id, detection);
+    }
+  }
+
+  return Array.from(combined.values());
 }
 
 export async function detectionRoutes(app: FastifyInstance): Promise<void> {
@@ -100,16 +89,43 @@ export async function detectionRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      const detection: StoredDetection = {
-        ...parsedDetection.data,
-        received_at: new Date().toISOString(),
-      };
+      let detection: StoredDetection;
+      let persisted = false;
 
-      latestDetections.set(detection.camera_id, detection);
+      try {
+        const previous = liveDetections.get(parsedDetection.data.camera_id);
+        const lastSaved =
+          lastPersistedAt.get(parsedDetection.data.camera_id) ?? 0;
+        const shouldPersist =
+          !previous ||
+          previous.status !== parsedDetection.data.status ||
+          Date.now() - lastSaved >= config.detectionPersistIntervalMs;
+
+        if (shouldPersist) {
+          detection = await detectionStore.save(parsedDetection.data);
+          lastPersistedAt.set(parsedDetection.data.camera_id, Date.now());
+          persisted = true;
+        } else {
+          detection = {
+            ...parsedDetection.data,
+            client_id: previous.client_id,
+            received_at: new Date().toISOString(),
+          };
+        }
+      } catch (error) {
+        request.log.error({ err: error }, "failed to persist detection");
+        return reply.code(503).send({
+          error: "storage_unavailable",
+          message: "The detection could not be persisted.",
+        });
+      }
+
+      liveDetections.set(detection.camera_id, detection);
       broadcastDetection(detection);
 
       return reply.code(202).send({
         accepted: true,
+        persisted,
         camera_id: detection.camera_id,
         received_at: detection.received_at,
       });
@@ -118,27 +134,45 @@ export async function detectionRoutes(app: FastifyInstance): Promise<void> {
 
   app.get(
     "/detections/latest",
-    { preHandler: requireAiServiceAuthentication },
-    async () => ({
-      data: Array.from(latestDetections.values()),
-    }),
+    { preHandler: requireDashboardAuthentication },
+    async (request, reply) => {
+      try {
+        return { data: await latestDetections(getRequestClientId(request)) };
+      } catch (error) {
+        request.log.error({ err: error }, "failed to read detections");
+        return reply.code(503).send({
+          error: "storage_unavailable",
+          message: "Detections are temporarily unavailable.",
+        });
+      }
+    },
   );
 
   app.get(
     "/ws/detections",
     {
       websocket: true,
-      preValidation: requireDashboardWebSocketAuthentication,
+      preValidation: requireDashboardAuthentication,
     },
-    (socket) => {
-      dashboardClients.add(socket);
+    async (socket, request) => {
+      const clientId = getRequestClientId(request);
+      dashboardClients.set(socket, clientId);
 
-      socket.send(
-        JSON.stringify({
-          type: "snapshot",
-          data: Array.from(latestDetections.values()),
-        }),
-      );
+      try {
+        socket.send(
+          JSON.stringify({
+            type: "snapshot",
+            data: await latestDetections(clientId),
+          }),
+        );
+      } catch {
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            message: "Unable to load the initial detection snapshot.",
+          }),
+        );
+      }
 
       socket.on("close", () => {
         dashboardClients.delete(socket);

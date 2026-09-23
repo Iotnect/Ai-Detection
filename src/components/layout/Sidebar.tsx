@@ -20,13 +20,13 @@ const menuItems = [
     name: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
-    roles: ["admin", "public"],
+    roles: ["admin", "client", "public"],
   },
   {
     name: "Water Level",
     href: "/water-level",
     icon: Waves,
-    roles: ["admin", "public"],
+    roles: ["admin", "client", "public"],
   },
 ];
 
@@ -48,7 +48,7 @@ export default function Sidebar({
 
   const handleLogout = () => {
     onCloseMobile();
-    logout();
+    void logout();
   };
 
   const filteredMenu = menuItems.filter((item) =>
