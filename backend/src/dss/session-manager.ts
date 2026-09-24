@@ -19,7 +19,6 @@ export class DssSessionManager {
 
   async start(): Promise<void> {
     this.stopped = false;
-    await this.getToken();
 
     this.keepAliveTimer = setInterval(
       () => this.scheduleMaintenance(() => this.runKeepAlive(), "DSS keepalive failed"),
@@ -37,11 +36,24 @@ export class DssSessionManager {
     this.refreshTimer.unref();
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.stopped = true;
     clearInterval(this.keepAliveTimer);
     clearInterval(this.refreshTimer);
+    const session = this.session;
     this.session = undefined;
+
+    if (session) {
+      try {
+        await this.client.logout(session.token);
+        this.logger.info({}, "DSS session logged out");
+      } catch (error) {
+        this.logger.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          "DSS logout failed during shutdown",
+        );
+      }
+    }
   }
 
   async getToken(): Promise<string> {

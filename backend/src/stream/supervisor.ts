@@ -15,6 +15,11 @@ export interface StreamStatus {
 }
 
 const RETRY_DELAYS_MS = [2_000, 5_000, 10_000, 30_000];
+const MAX_FFMPEG_ERROR_LENGTH = 4_000;
+
+function redactStreamSecrets(value: string): string {
+  return value.replace(/([?&]token=)[^&\s]+/gi, "$1[redacted]");
+}
 
 function wait(milliseconds: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
@@ -110,8 +115,6 @@ export class StreamSupervisor {
             "warning",
             "-rtsp_transport",
             "tcp",
-            "-rw_timeout",
-            "15000000",
             "-i",
             source.rtspUrl,
             "-map",
@@ -128,7 +131,11 @@ export class StreamSupervisor {
           { stdio: ["ignore", "ignore", "pipe"] },
         );
         this.child = child;
-        child.stderr?.resume();
+        let ffmpegError = "";
+        child.stderr?.setEncoding("utf8");
+        child.stderr?.on("data", (chunk: string) => {
+          ffmpegError = `${ffmpegError}${chunk}`.slice(-MAX_FFMPEG_ERROR_LENGTH);
+        });
         this.setState("online");
         this.logger.info({}, "DSS stream relay started");
 
@@ -142,8 +149,9 @@ export class StreamSupervisor {
           break;
         }
 
+        const detail = redactStreamSecrets(ffmpegError.trim());
         throw new Error(
-          `FFmpeg relay exited (code ${exitCode ?? "none"}, signal ${signal ?? "none"})`,
+          `FFmpeg relay exited (code ${exitCode ?? "none"}, signal ${signal ?? "none"})${detail ? `: ${detail}` : ""}`,
         );
       } catch (error) {
         if (this.stopping) {

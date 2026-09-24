@@ -18,6 +18,7 @@ const ConfigSchema = z.object({
   DSS_PASSWORD: z.string().min(1).optional(),
   DSS_CHANNEL_ID: z.string().min(1).optional(),
   DSS_CLIENT_MAC: z.string().min(1).optional(),
+  DSS_LOGIN_TYPE: z.enum(["1", "2"]).default("2"),
   DSS_TLS_REJECT_UNAUTHORIZED: z
     .enum(["true", "false"])
     .default("true")
@@ -114,6 +115,7 @@ export const config = {
   dss: dss
     ? {
         ...dss,
+        loginType: values.DSS_LOGIN_TYPE,
         tlsRejectUnauthorized: values.DSS_TLS_REJECT_UNAUTHORIZED,
         keepAliveIntervalMs: values.DSS_KEEPALIVE_INTERVAL_MS,
         tokenRefreshIntervalMs: values.DSS_TOKEN_REFRESH_INTERVAL_MS,

@@ -33,6 +33,7 @@ export function createStreamRuntime(logger: AppLogger): StreamRuntime {
     config.dss.username,
     config.dss.password,
     config.dss.clientMac,
+    config.dss.loginType,
   );
   const sessionManager = new DssSessionManager(
     client,
@@ -57,7 +58,7 @@ export function createStreamRuntime(logger: AppLogger): StreamRuntime {
     },
     async stop() {
       await supervisor.stop();
-      sessionManager.stop();
+      await sessionManager.stop();
     },
     status: () => supervisor.getStatus(),
   };

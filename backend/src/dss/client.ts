@@ -117,6 +117,7 @@ export class DssClient {
     private readonly username: string,
     private readonly password: string,
     private readonly clientMac: string,
+    private readonly loginType: "1" | "2" = "2",
   ) {
     this.http = new DssHttpClient(baseUrl, rejectUnauthorized);
   }
@@ -164,7 +165,7 @@ export class DssClient {
       ipAddress: "",
       clientType: "WINPC_V2",
       userType: "0",
-      loginType: "1",
+      loginType: this.loginType,
     });
 
     if (credentialsResponse.statusCode >= 400) {
@@ -174,8 +175,16 @@ export class DssClient {
       );
     }
 
+    const authenticationResponse = credentialsResponse.body;
+
+    // DSS V8.6 can return the session fields directly, while newer releases
+    // can wrap them in the standard { code, data } platform response.
+    if (authenticationResponse.token || authenticationResponse.data?.token) {
+      return sessionFromResponse(authenticationResponse);
+    }
+
     return sessionFromResponse(
-      requirePlatformSuccess(credentialsResponse.body, "authentication"),
+      requirePlatformSuccess(authenticationResponse, "authentication"),
     );
   }
 
@@ -209,6 +218,21 @@ export class DssClient {
     return sessionFromResponse(
       requirePlatformSuccess(response.body, "token refresh"),
     );
+  }
+
+  async logout(token: string): Promise<void> {
+    const response = await this.http.request<PlatformResponse>(
+      "POST",
+      "/brms/api/v1.0/accounts/unauthorize",
+      {},
+      token,
+    );
+
+    if (response.statusCode === 401) {
+      return;
+    }
+
+    requirePlatformSuccess(response.body, "logout");
   }
 
   async startVideo(token: string, channelId: string): Promise<DssStreamSource> {

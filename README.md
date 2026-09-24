@@ -79,8 +79,8 @@ placeholder. Important rules:
 - `MEDIAMTX_PUBLISH_PASSWORD` must contain the original, non-URL-encoded password.
 - Keep `DSS_TLS_REJECT_UNAUTHORIZED=true`; use `false` only temporarily when DSS
   has a self-signed/mismatched certificate and no correct hostname is available.
-- Start with `STREAM_TRANSCODE_H264=false`. If H.265 HLS does not play in target
-  browsers, change it to `true` and confirm Railway has enough CPU.
+- Keep `STREAM_TRANSCODE_H264=true` for MBS-KDN-C1 because DSS supplies H.265
+  and the dashboard targets Chrome-compatible HLS. Confirm Railway has enough CPU.
 
 Expose backend port `4000` through a Railway HTTPS domain. `/health` shows the
 relay state without exposing a token or stream URL.

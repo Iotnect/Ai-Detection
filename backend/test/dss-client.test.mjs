@@ -39,13 +39,14 @@ test("DSS authentication and StartVideo use the documented protocol", async () =
         );
         assert.equal(body.signature, expectedSignature);
         assert.equal(body.randomKey, randomKey);
+        assert.equal(body.loginType, "2");
         assert.ok(body.secretKey.length > 100);
         assert.ok(body.secretVector.length > 100);
         response.end(
           JSON.stringify({
-            code: 1000,
-            desc: "Success",
-            data: { token: "login-token", credential: "credential" },
+            token: "login-token",
+            credential: "credential",
+            duration: 30,
           }),
         );
         return;
