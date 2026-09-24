@@ -103,6 +103,10 @@ export class StreamSupervisor {
               "zerolatency",
               "-pix_fmt",
               "yuv420p",
+              "-force_key_frames",
+              "expr:gte(t,n_forced*1)",
+              "-sc_threshold",
+              "0",
               "-an",
             ]
           : ["-c", "copy"];

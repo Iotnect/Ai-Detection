@@ -64,7 +64,9 @@ export default function HlsPlayer({
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          liveSyncDurationCount: 3,
+          liveSyncDurationCount: 2,
+          liveMaxLatencyDurationCount: 5,
+          maxLiveSyncPlaybackRate: 1.5,
           xhrSetup: (request) => {
             if (accessToken) {
               request.setRequestHeader("Authorization", `Bearer ${accessToken}`);

@@ -25,6 +25,8 @@ services:
       MTX_RTSPTRANSPORTS: tcp
       MTX_API: "yes"
       MTX_APIADDRESS: ":9997"
+      MTX_HLSALWAYSREMUX: "yes"
+      MTX_HLSSEGMENTDURATION: 1s
       MTX_WEBRTCADDITIONALHOSTS: "${MEDIAMTX_WEBRTC_HOSTS:-localhost}"
     ports:
       - "127.0.0.1:8554:8554"
