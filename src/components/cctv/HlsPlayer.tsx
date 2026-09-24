@@ -28,21 +28,39 @@ export default function HlsPlayer({
 
     let hls: Hls | undefined;
     let cancelled = false;
+    let generation = 0;
     let accessToken: string | undefined;
     const authSubscription = supabase?.auth.onAuthStateChange((_event, session) => {
       accessToken = session?.access_token;
     });
 
+    const stopPlayer = () => {
+      generation += 1;
+      hls?.destroy();
+      hls = undefined;
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+
     const attach = async () => {
+      const currentGeneration = ++generation;
       setFailed(false);
       const { data } = (await supabase?.auth.getSession()) ?? {
         data: { session: null },
       };
       accessToken = data.session?.access_token;
 
-      if (cancelled) return;
+      if (
+        cancelled ||
+        document.visibilityState === "hidden" ||
+        currentGeneration !== generation
+      ) {
+        return;
+      }
 
       if (Hls.isSupported()) {
+        hls?.destroy();
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
@@ -56,6 +74,9 @@ export default function HlsPlayer({
 
         hls.loadSource(src);
         hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          void video.play().catch(() => undefined);
+        });
         hls.on(Hls.Events.ERROR, (_event, error) => {
           if (!error.fatal) return;
 
@@ -83,14 +104,33 @@ export default function HlsPlayer({
       setFailed(true);
     };
 
+    const resumeAtLiveEdge = () => {
+      const livePosition = hls?.liveSyncPosition;
+
+      if (livePosition !== null && livePosition !== undefined) {
+        video.currentTime = livePosition;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        stopPlayer();
+        return;
+      }
+
+      void attach();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    video.addEventListener("play", resumeAtLiveEdge);
     void attach();
 
     return () => {
       cancelled = true;
       authSubscription?.data.subscription.unsubscribe();
-      hls?.destroy();
-      video.removeAttribute("src");
-      video.load();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      video.removeEventListener("play", resumeAtLiveEdge);
+      stopPlayer();
     };
   }, [src]);
 
