@@ -30,6 +30,7 @@ export default function HlsPlayer({
     let cancelled = false;
     let generation = 0;
     let nativeRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let nativeRetryTimer: ReturnType<typeof setTimeout> | undefined;
     let accessToken: string | undefined;
     const authSubscription = supabase?.auth.onAuthStateChange((_event, session) => {
       accessToken = session?.access_token;
@@ -39,6 +40,8 @@ export default function HlsPlayer({
       generation += 1;
       clearTimeout(nativeRefreshTimer);
       nativeRefreshTimer = undefined;
+      clearTimeout(nativeRetryTimer);
+      nativeRetryTimer = undefined;
       hls?.destroy();
       hls = undefined;
       video.pause();
@@ -150,6 +153,19 @@ export default function HlsPlayer({
             apiUrl,
           );
           nativeUrl.searchParams.set("ticket", ticket.token);
+
+          // MediaMTX also checks playlist availability before assigning a
+          // native HLS source on iOS. Safari otherwise tends to remain stuck
+          // after an initial timeout or unauthorized playlist response.
+          const playlistResponse = await fetch(nativeUrl, {
+            cache: "no-store",
+          });
+
+          if (!playlistResponse.ok) {
+            setFailed(true);
+            return;
+          }
+
           video.src = nativeUrl.toString();
           void video.play().catch(() => undefined);
           nativeRefreshTimer = setTimeout(
@@ -174,6 +190,31 @@ export default function HlsPlayer({
       }
     };
 
+    const scheduleNativeReconnect = () => {
+      if (
+        Hls.isSupported() ||
+        cancelled ||
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+
+      clearTimeout(nativeRetryTimer);
+      nativeRetryTimer = setTimeout(() => void attach(), 3_000);
+    };
+
+    const handlePlaying = () => {
+      clearTimeout(nativeRetryTimer);
+      nativeRetryTimer = undefined;
+      setFailed(false);
+    };
+
+    const handleStalled = () => {
+      if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        scheduleNativeReconnect();
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         stopPlayer();
@@ -185,6 +226,9 @@ export default function HlsPlayer({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     video.addEventListener("play", resumeAtLiveEdge);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("error", scheduleNativeReconnect);
+    video.addEventListener("stalled", handleStalled);
     void attach();
 
     return () => {
@@ -192,6 +236,9 @@ export default function HlsPlayer({
       authSubscription?.data.subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("play", resumeAtLiveEdge);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("error", scheduleNativeReconnect);
+      video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
   }, [src]);

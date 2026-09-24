@@ -74,6 +74,11 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
   app.get<{
     Params: { path: string; "*": string };
   }>("/hls/:path/*", async (request, reply) => {
+    // The dashboard is hosted by Vercel while this media proxy is hosted by
+    // Railway. Helmet defaults CORP to same-origin, which blocks native Safari
+    // from loading HLS resources even when CORS allows the dashboard origin.
+    reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+
     const requestUrl = new URL(request.raw.url ?? "/", "http://backend.internal");
     const ticket = requestUrl.searchParams.get("ticket");
     const streamPath = request.params.path;
@@ -92,11 +97,17 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
     upstreamUrl.search = requestUrl.search;
 
     try {
-      const upstream = await fetch(upstreamUrl, {
-        headers: {
+      const upstreamHeaders: Record<string, string> = {
           Accept: request.headers.accept ?? "*/*",
           Authorization: `Bearer ${ticket}`,
-        },
+      };
+
+      if (request.headers.range) {
+        upstreamHeaders.Range = request.headers.range;
+      }
+
+      const upstream = await fetch(upstreamUrl, {
+        headers: upstreamHeaders,
         redirect: "follow",
       });
       const contentType = upstream.headers.get("content-type") ??
@@ -107,6 +118,11 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
       reply.code(upstream.status);
       reply.header("Content-Type", contentType);
       reply.header("Cache-Control", "no-store");
+
+      for (const header of ["accept-ranges", "content-range"] as const) {
+        const value = upstream.headers.get(header);
+        if (value) reply.header(header, value);
+      }
 
       if (contentType.includes("mpegurl") || resource.endsWith(".m3u8")) {
         return reply.send(rewriteHlsManifest(await upstream.text(), ticket));
