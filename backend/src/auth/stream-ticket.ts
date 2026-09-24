@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { config } from "../config.js";
 
 const TICKET_TTL_SECONDS = 300;
+export const DASHBOARD_WEBSOCKET_TICKET_PATH = "__dashboard_ws__";
 
 interface StreamTicketPayload {
   clientId: string;

@@ -4,6 +4,10 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { config } from "../config.js";
 import { getSupabaseAdmin } from "../db/supabase.js";
+import {
+  DASHBOARD_WEBSOCKET_TICKET_PATH,
+  verifyStreamTicket,
+} from "./stream-ticket.js";
 
 const requestClientIds = new WeakMap<FastifyRequest, string>();
 
@@ -36,6 +40,17 @@ export async function requireDashboardAuthentication(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<FastifyReply | void> {
+  const requestUrl = new URL(request.raw.url ?? "/", "http://backend.internal");
+  const dashboardTicket = requestUrl.searchParams.get("ticket");
+  const dashboardPayload = dashboardTicket
+    ? verifyStreamTicket(dashboardTicket, DASHBOARD_WEBSOCKET_TICKET_PATH)
+    : undefined;
+
+  if (dashboardPayload) {
+    requestClientIds.set(request, dashboardPayload.clientId);
+    return;
+  }
+
   const supabase = getSupabaseAdmin();
 
   if (!supabase) {

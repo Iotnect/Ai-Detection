@@ -44,9 +44,24 @@ export function useDetectionStream() {
         return;
       }
 
+      const ticketResponse = await fetch(`${apiUrl}/api/v1/ws-ticket`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const ticket = (await ticketResponse.json()) as { token?: string };
+
+      if (!ticketResponse.ok || !ticket.token || stopped) {
+        setConnectionState("offline");
+        retryTimer = setTimeout(() => void connect(), 3_000);
+        return;
+      }
+
       const url = new URL("/api/v1/ws/detections", apiUrl);
       url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      socket = new WebSocket(url, accessToken);
+      url.searchParams.set("ticket", ticket.token);
+      socket = new WebSocket(url);
 
       socket.addEventListener("open", () => setConnectionState("online"));
       socket.addEventListener("message", (event) => {

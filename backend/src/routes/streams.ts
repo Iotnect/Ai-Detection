@@ -7,6 +7,7 @@ import {
 } from "../auth/dashboard-auth.js";
 import {
   createStreamTicket,
+  DASHBOARD_WEBSOCKET_TICKET_PATH,
   verifyStreamTicket,
 } from "../auth/stream-ticket.js";
 import { config } from "../config.js";
@@ -40,6 +41,20 @@ export function rewriteHlsManifest(manifest: string, ticket: string): string {
 }
 
 export async function streamRoutes(app: FastifyInstance): Promise<void> {
+  app.post(
+    "/ws-ticket",
+    { preHandler: requireDashboardAuthentication },
+    async (request, reply) => {
+      const clientId = getRequestClientId(request);
+
+      if (!clientId) {
+        return reply.code(503).send({ error: "websocket_auth_unavailable" });
+      }
+
+      return createStreamTicket(clientId, DASHBOARD_WEBSOCKET_TICKET_PATH);
+    },
+  );
+
   app.post(
     "/stream-ticket",
     { preHandler: requireDashboardAuthentication },

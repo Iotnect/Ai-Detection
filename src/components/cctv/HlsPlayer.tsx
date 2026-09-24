@@ -65,121 +65,112 @@ export default function HlsPlayer({
         return;
       }
 
-      if (Hls.isSupported()) {
-        hls?.destroy();
-        hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          liveSyncDurationCount: 2,
-          liveMaxLatencyDurationCount: 5,
-          maxLiveSyncPlaybackRate: 1.5,
-          xhrSetup: (request) => {
-            if (accessToken) {
-              request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
-            }
-          },
-        });
-
-        hls.loadSource(src);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          void video.play().catch(() => undefined);
-        });
-        hls.on(Hls.Events.ERROR, (_event, error) => {
-          if (!error.fatal) return;
-
-          if (error.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls?.startLoad();
-            return;
-          }
-
-          if (error.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls?.recoverMediaError();
-            return;
-          }
-
-          setFailed(true);
-          hls?.destroy();
-        });
-        return;
-      }
-
-      if (video.canPlayType("application/vnd.apple.mpegurl") && !accessToken) {
+      if (!accessToken) {
         setFailed(true);
         return;
       }
 
-      if (video.canPlayType("application/vnd.apple.mpegurl") && accessToken) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-        if (!apiUrl) {
-          setFailed(true);
-          return;
-        }
-
-        try {
-          const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
-
-          if (!streamPath) {
-            setFailed(true);
-            return;
-          }
-
-          const response = await fetch(`${apiUrl}/api/v1/stream-ticket`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ path: streamPath }),
-          });
-          const ticket = (await response.json()) as {
-            token?: string;
-            expiresIn?: number;
-          };
-
-          if (
-            !response.ok ||
-            !ticket.token ||
-            cancelled ||
-            currentGeneration !== generation
-          ) {
-            setFailed(true);
-            return;
-          }
-
-          const nativeUrl = new URL(
-            `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
-            apiUrl,
-          );
-          nativeUrl.searchParams.set("ticket", ticket.token);
-
-          // MediaMTX also checks playlist availability before assigning a
-          // native HLS source on iOS. Safari otherwise tends to remain stuck
-          // after an initial timeout or unauthorized playlist response.
-          const playlistResponse = await fetch(nativeUrl, {
-            cache: "no-store",
-          });
-
-          if (!playlistResponse.ok) {
-            setFailed(true);
-            return;
-          }
-
-          video.src = nativeUrl.toString();
-          void video.play().catch(() => undefined);
-          nativeRefreshTimer = setTimeout(
-            () => void attach(),
-            Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
-          );
-          return;
-        } catch {
-          setFailed(true);
-          return;
-        }
+      if (!apiUrl) {
+        setFailed(true);
+        return;
       }
 
-      setFailed(true);
+      try {
+        const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
+
+        if (!streamPath) {
+          setFailed(true);
+          return;
+        }
+
+        const response = await fetch(`${apiUrl}/api/v1/stream-ticket`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ path: streamPath }),
+        });
+        const ticket = (await response.json()) as {
+          token?: string;
+          expiresIn?: number;
+        };
+
+        if (
+          !response.ok ||
+          !ticket.token ||
+          cancelled ||
+          currentGeneration !== generation
+        ) {
+          setFailed(true);
+          return;
+        }
+
+        const playbackUrl = new URL(
+          `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
+          apiUrl,
+        );
+        playbackUrl.searchParams.set("ticket", ticket.token);
+
+        const playlistResponse = await fetch(playbackUrl, {
+          cache: "no-store",
+        });
+
+        if (!playlistResponse.ok) {
+          setFailed(true);
+          return;
+        }
+
+        nativeRefreshTimer = setTimeout(
+          () => void attach(),
+          Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
+        );
+
+        if (Hls.isSupported()) {
+          hls?.destroy();
+          hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            liveSyncDurationCount: 2,
+            liveMaxLatencyDurationCount: 5,
+            maxLiveSyncPlaybackRate: 1.5,
+          });
+          hls.loadSource(playbackUrl.toString());
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            void video.play().catch(() => undefined);
+          });
+          hls.on(Hls.Events.ERROR, (_event, error) => {
+            if (!error.fatal) return;
+
+            if (error.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls?.startLoad();
+              return;
+            }
+
+            if (error.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              hls?.recoverMediaError();
+              return;
+            }
+
+            setFailed(true);
+            hls?.destroy();
+          });
+          return;
+        }
+
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = playbackUrl.toString();
+          void video.play().catch(() => undefined);
+          return;
+        }
+
+        setFailed(true);
+      } catch {
+        setFailed(true);
+      }
     };
 
     const resumeAtLiveEdge = () => {
