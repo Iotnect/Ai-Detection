@@ -127,6 +127,11 @@ NEXT_PUBLIC_HLS_URL=https://YOUR-MEDIAMTX-DOMAIN/mbs-kdn-c1/index.m3u8
 Redeploy after changing any `NEXT_PUBLIC_*` variable because Next.js embeds these
 at build time. Add the Vercel URL to `FRONTEND_ORIGINS` on Railway.
 
+Chrome-family browsers authenticate HLS with the Supabase bearer token. Native
+HLS clients such as iPhone Safari first request a five-minute, camera-scoped
+playback ticket from `POST /api/v1/stream-ticket`; no Supabase token is placed in
+the media URL.
+
 ## 4. Vast.ai inference
 
 Give the inference service the protected MediaMTX URL, not the temporary DSS URL:

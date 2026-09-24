@@ -99,8 +99,55 @@ export default function HlsPlayer({
       }
 
       if (video.canPlayType("application/vnd.apple.mpegurl") && !accessToken) {
-        video.src = src;
+        setFailed(true);
         return;
+      }
+
+      if (video.canPlayType("application/vnd.apple.mpegurl") && accessToken) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+        if (!apiUrl) {
+          setFailed(true);
+          return;
+        }
+
+        try {
+          const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
+
+          if (!streamPath) {
+            setFailed(true);
+            return;
+          }
+
+          const response = await fetch(`${apiUrl}/api/v1/stream-ticket`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ path: streamPath }),
+          });
+          const ticket = (await response.json()) as { token?: string };
+
+          if (
+            !response.ok ||
+            !ticket.token ||
+            cancelled ||
+            currentGeneration !== generation
+          ) {
+            setFailed(true);
+            return;
+          }
+
+          const nativeUrl = new URL(src);
+          nativeUrl.searchParams.set("token", ticket.token);
+          video.src = nativeUrl.toString();
+          void video.play().catch(() => undefined);
+          return;
+        } catch {
+          setFailed(true);
+          return;
+        }
       }
 
       setFailed(true);

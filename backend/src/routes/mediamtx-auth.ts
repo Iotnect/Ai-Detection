@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { config } from "../config.js";
+import { verifyStreamTicket } from "../auth/stream-ticket.js";
 import { getSupabaseAdmin } from "../db/supabase.js";
 
 const AuthRequestSchema = z.object({
@@ -55,6 +56,13 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
       input.protocol === "rtsp" &&
       valueMatches(input.user, auth.aiUser) &&
       valueMatches(input.password, auth.aiPassword)
+    ) {
+      return reply.code(204).send();
+    }
+
+    if (
+      ["read", "playback"].includes(input.action) &&
+      verifyStreamTicket(input.token, input.path)
     ) {
       return reply.code(204).send();
     }

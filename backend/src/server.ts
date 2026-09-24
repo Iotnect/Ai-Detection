@@ -8,6 +8,7 @@ import Fastify from "fastify";
 import { config } from "./config.js";
 import { detectionRoutes } from "./routes/detections.js";
 import { mediaMtxAuthRoutes } from "./routes/mediamtx-auth.js";
+import { streamRoutes } from "./routes/streams.js";
 import { createStreamRuntime } from "./stream/runtime.js";
 
 const app = Fastify({
@@ -23,6 +24,7 @@ await app.register(cors, {
 });
 
 await app.register(detectionRoutes, { prefix: "/api/v1" });
+await app.register(streamRoutes, { prefix: "/api/v1" });
 await app.register(mediaMtxAuthRoutes, { prefix: "/internal/mediamtx" });
 
 app.get("/health", async () => ({
