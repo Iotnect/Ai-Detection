@@ -5,12 +5,39 @@ import {
   getRequestClientId,
   requireDashboardAuthentication,
 } from "../auth/dashboard-auth.js";
-import { createStreamTicket } from "../auth/stream-ticket.js";
+import {
+  createStreamTicket,
+  verifyStreamTicket,
+} from "../auth/stream-ticket.js";
+import { config } from "../config.js";
 import { getSupabaseAdmin } from "../db/supabase.js";
 
 const StreamTicketRequestSchema = z.object({
   path: z.string().min(1),
 });
+
+function appendTicket(uri: string, ticket: string): string {
+  if (uri.startsWith("data:")) return uri;
+
+  return `${uri}${uri.includes("?") ? "&" : "?"}ticket=${encodeURIComponent(ticket)}`;
+}
+
+export function rewriteHlsManifest(manifest: string, ticket: string): string {
+  return manifest
+    .split(/(\r?\n)/)
+    .map((line) => {
+      if (line === "\n" || line === "\r\n" || !line.trim()) return line;
+
+      if (line.startsWith("#")) {
+        return line.replace(/URI="([^"]+)"/g, (_match, uri: string) =>
+          `URI="${appendTicket(uri, ticket)}"`,
+        );
+      }
+
+      return appendTicket(line, ticket);
+    })
+    .join("");
+}
 
 export async function streamRoutes(app: FastifyInstance): Promise<void> {
   app.post(
@@ -43,4 +70,52 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
       return createStreamTicket(clientId, parsed.data.path);
     },
   );
+
+  app.get<{
+    Params: { path: string; "*": string };
+  }>("/hls/:path/*", async (request, reply) => {
+    const requestUrl = new URL(request.raw.url ?? "/", "http://backend.internal");
+    const ticket = requestUrl.searchParams.get("ticket");
+    const streamPath = request.params.path;
+    const resource = request.params["*"];
+
+    if (!ticket || !resource || !verifyStreamTicket(ticket, streamPath)) {
+      return reply.code(401).send({ error: "invalid_stream_ticket" });
+    }
+
+    requestUrl.searchParams.delete("ticket");
+
+    const upstreamUrl = new URL(
+      `/${encodeURIComponent(streamPath)}/${resource}`,
+      config.mediaMtxHlsInternalUrl,
+    );
+    upstreamUrl.search = requestUrl.search;
+
+    try {
+      const upstream = await fetch(upstreamUrl, {
+        headers: {
+          Accept: request.headers.accept ?? "*/*",
+          Authorization: `Bearer ${ticket}`,
+        },
+        redirect: "follow",
+      });
+      const contentType = upstream.headers.get("content-type") ??
+        (resource.endsWith(".m3u8")
+          ? "application/vnd.apple.mpegurl"
+          : "application/octet-stream");
+
+      reply.code(upstream.status);
+      reply.header("Content-Type", contentType);
+      reply.header("Cache-Control", "no-store");
+
+      if (contentType.includes("mpegurl") || resource.endsWith(".m3u8")) {
+        return reply.send(rewriteHlsManifest(await upstream.text(), ticket));
+      }
+
+      return reply.send(Buffer.from(await upstream.arrayBuffer()));
+    } catch (error) {
+      request.log.error({ error, upstreamUrl: upstreamUrl.toString() }, "HLS proxy failed");
+      return reply.code(502).send({ error: "stream_upstream_unavailable" });
+    }
+  });
 }

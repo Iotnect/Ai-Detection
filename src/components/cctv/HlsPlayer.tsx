@@ -29,6 +29,7 @@ export default function HlsPlayer({
     let hls: Hls | undefined;
     let cancelled = false;
     let generation = 0;
+    let nativeRefreshTimer: ReturnType<typeof setTimeout> | undefined;
     let accessToken: string | undefined;
     const authSubscription = supabase?.auth.onAuthStateChange((_event, session) => {
       accessToken = session?.access_token;
@@ -36,6 +37,8 @@ export default function HlsPlayer({
 
     const stopPlayer = () => {
       generation += 1;
+      clearTimeout(nativeRefreshTimer);
+      nativeRefreshTimer = undefined;
       hls?.destroy();
       hls = undefined;
       video.pause();
@@ -127,7 +130,10 @@ export default function HlsPlayer({
             },
             body: JSON.stringify({ path: streamPath }),
           });
-          const ticket = (await response.json()) as { token?: string };
+          const ticket = (await response.json()) as {
+            token?: string;
+            expiresIn?: number;
+          };
 
           if (
             !response.ok ||
@@ -139,10 +145,17 @@ export default function HlsPlayer({
             return;
           }
 
-          const nativeUrl = new URL(src);
-          nativeUrl.searchParams.set("token", ticket.token);
+          const nativeUrl = new URL(
+            `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
+            apiUrl,
+          );
+          nativeUrl.searchParams.set("ticket", ticket.token);
           video.src = nativeUrl.toString();
           void video.play().catch(() => undefined);
+          nativeRefreshTimer = setTimeout(
+            () => void attach(),
+            Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
+          );
           return;
         } catch {
           setFailed(true);

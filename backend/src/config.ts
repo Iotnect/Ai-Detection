@@ -30,6 +30,10 @@ const ConfigSchema = z.object({
     .positive()
     .default(1_200_000),
   MEDIAMTX_PUBLISH_URL: z.string().url().optional(),
+  MEDIAMTX_HLS_INTERNAL_URL: z
+    .string()
+    .url()
+    .default("http://mediamtx.railway.internal:8888"),
   MEDIAMTX_PUBLISH_USER: z.string().min(1).optional(),
   MEDIAMTX_PUBLISH_PASSWORD: z.string().min(16).optional(),
   MEDIAMTX_AI_USER: z.string().min(1).optional(),
@@ -122,6 +126,7 @@ export const config = {
       }
     : undefined,
   mediaMtxPublishUrl: values.MEDIAMTX_PUBLISH_URL,
+  mediaMtxHlsInternalUrl: values.MEDIAMTX_HLS_INTERNAL_URL,
   mediaMtxAuth,
   ffmpegPath: values.FFMPEG_PATH,
   streamTranscodeH264: values.STREAM_TRANSCODE_H264,
