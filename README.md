@@ -88,7 +88,7 @@ relay state without exposing a token or stream URL.
 ### MediaMTX
 
 Create an empty Railway service from Docker image
-`bluenviron/mediamtx:1.21.1` and set:
+`bluenviron/mediamtx:1.19.2` and set:
 
 ```text
 MTX_AUTHMETHOD=http
@@ -96,6 +96,7 @@ MTX_AUTHHTTPADDRESS=http://backend.railway.internal:4000/internal/mediamtx/auth
 MTX_RTSPTRANSPORTS=tcp
 MTX_HLSVARIANT=fmp4
 MTX_HLSALLOWORIGINS=https://YOUR-VERCEL-DOMAIN
+MTX_HLSTRUSTEDPROXIES=0.0.0.0/0,::/0
 MTX_API=no
 MTX_RTMP=no
 MTX_SRT=no

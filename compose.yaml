@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   mediamtx:
-    image: bluenviron/mediamtx:1.21.1
+    image: bluenviron/mediamtx:1.19.2
     restart: unless-stopped
     environment:
       MTX_RTSPTRANSPORTS: tcp
