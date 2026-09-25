@@ -52,8 +52,8 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (
-      ["read", "playback"].includes(input.action) &&
-      ["rtsp", "hls"].includes(input.protocol) &&
+      input.action === "read" &&
+      input.protocol === "rtsp" &&
       valueMatches(input.user, auth.aiUser) &&
       valueMatches(input.password, auth.aiPassword)
     ) {

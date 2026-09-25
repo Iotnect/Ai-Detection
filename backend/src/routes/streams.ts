@@ -115,9 +115,7 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
       const upstreamHeaders: Record<string, string> = {
           Accept: request.headers.accept ?? "*/*",
           Authorization: config.mediaMtxAuth
-            ? `Basic ${Buffer.from(
-                `${config.mediaMtxAuth.aiUser}:${config.mediaMtxAuth.aiPassword}`,
-              ).toString("base64")}`
+            ? `Bearer ${config.mediaMtxAuth.aiPassword}`
             : `Bearer ${ticket}`,
       };
 
