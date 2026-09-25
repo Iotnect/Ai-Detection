@@ -43,14 +43,29 @@ function NotificationBell({ compact = false }: { compact?: boolean }) {
               alerts.map((alert) => (
                 <div
                   key={`${alert.camera_id}-${alert.received_at}`}
-                  className="flex gap-3 rounded-lg p-3 hover:bg-slate-800"
+                  className={`flex gap-3 rounded-lg border p-3 ${
+                    alert.status.toUpperCase() === "DANGER"
+                      ? "border-red-500/30 bg-red-500/10"
+                      : "border-amber-500/30 bg-amber-500/10"
+                  }`}
                 >
-                  <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-400" />
+                  <AlertTriangle
+                    size={17}
+                    className={`mt-0.5 shrink-0 ${
+                      alert.status.toUpperCase() === "DANGER"
+                        ? "text-red-400"
+                        : "text-amber-400"
+                    }`}
+                  />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-200">
-                      {alert.camera_id} &bull; {alert.status}
+                    <p className="text-xs font-semibold text-white">
+                      {alert.status.toUpperCase() === "DANGER"
+                        ? "Critical warning, water threshold met."
+                        : "Warning, water threshold met."}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">{alert.message}</p>
+                    <p className="mt-1 text-xs text-slate-300">
+                      {alert.camera_id} &bull; {alert.status.toUpperCase()}
+                    </p>
                     <p className="mt-1 text-[11px] text-slate-600">
                       {new Date(alert.timestamp).toLocaleString("en-MY")}
                     </p>
