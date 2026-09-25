@@ -119,6 +119,11 @@ export class StreamSupervisor {
             "warning",
             "-rtsp_transport",
             "tcp",
+            // Abort a stalled DSS RTSP read so the supervisor can request a
+            // fresh stream token instead of leaving a dead FFmpeg process
+            // marked as online indefinitely. FFmpeg expects microseconds.
+            "-timeout",
+            "15000000",
             "-i",
             source.rtspUrl,
             "-map",
