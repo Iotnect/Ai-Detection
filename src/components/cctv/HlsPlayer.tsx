@@ -3,7 +3,7 @@
 import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface HlsPlayerProps {
   src: string;
@@ -31,10 +31,6 @@ export default function HlsPlayer({
     let generation = 0;
     let nativeRefreshTimer: ReturnType<typeof setTimeout> | undefined;
     let nativeRetryTimer: ReturnType<typeof setTimeout> | undefined;
-    let accessToken: string | undefined;
-    const authSubscription = supabase?.auth.onAuthStateChange((_event, session) => {
-      accessToken = session?.access_token;
-    });
 
     const stopPlayer = () => {
       generation += 1;
@@ -49,24 +45,25 @@ export default function HlsPlayer({
       video.load();
     };
 
+    const scheduleReconnect = () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+
+      clearTimeout(nativeRetryTimer);
+      nativeRetryTimer = setTimeout(() => void attach(), 3_000);
+    };
+
     const attach = async () => {
       const currentGeneration = ++generation;
-      setFailed(false);
-      const { data } = (await supabase?.auth.getSession()) ?? {
-        data: { session: null },
-      };
-      accessToken = data.session?.access_token;
+      clearTimeout(nativeRefreshTimer);
+      nativeRefreshTimer = undefined;
+      hls?.destroy();
+      hls = undefined;
 
       if (
         cancelled ||
         document.visibilityState === "hidden" ||
         currentGeneration !== generation
       ) {
-        return;
-      }
-
-      if (!accessToken) {
-        setFailed(true);
         return;
       }
 
@@ -85,10 +82,9 @@ export default function HlsPlayer({
           return;
         }
 
-        const response = await fetch(`${apiUrl}/api/v1/stream-ticket`, {
+        const response = await authenticatedFetch(`${apiUrl}/api/v1/stream-ticket`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ path: streamPath }),
@@ -105,6 +101,7 @@ export default function HlsPlayer({
           currentGeneration !== generation
         ) {
           setFailed(true);
+          scheduleReconnect();
           return;
         }
 
@@ -120,6 +117,7 @@ export default function HlsPlayer({
 
         if (!playlistResponse.ok) {
           setFailed(true);
+          scheduleReconnect();
           return;
         }
 
@@ -129,7 +127,6 @@ export default function HlsPlayer({
         );
 
         if (Hls.isSupported()) {
-          hls?.destroy();
           hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
@@ -140,6 +137,7 @@ export default function HlsPlayer({
           hls.loadSource(playbackUrl.toString());
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setFailed(false);
             void video.play().catch(() => undefined);
           });
           hls.on(Hls.Events.ERROR, (_event, error) => {
@@ -153,8 +151,7 @@ export default function HlsPlayer({
               setFailed(true);
               hls?.destroy();
               hls = undefined;
-              clearTimeout(nativeRetryTimer);
-              nativeRetryTimer = setTimeout(() => void attach(), 3_000);
+              scheduleReconnect();
               return;
             }
 
@@ -180,6 +177,7 @@ export default function HlsPlayer({
         setFailed(true);
       } catch {
         setFailed(true);
+        scheduleReconnect();
       }
     };
 
@@ -191,19 +189,6 @@ export default function HlsPlayer({
       }
     };
 
-    const scheduleNativeReconnect = () => {
-      if (
-        Hls.isSupported() ||
-        cancelled ||
-        document.visibilityState === "hidden"
-      ) {
-        return;
-      }
-
-      clearTimeout(nativeRetryTimer);
-      nativeRetryTimer = setTimeout(() => void attach(), 3_000);
-    };
-
     const handlePlaying = () => {
       clearTimeout(nativeRetryTimer);
       nativeRetryTimer = undefined;
@@ -212,7 +197,7 @@ export default function HlsPlayer({
 
     const handleStalled = () => {
       if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-        scheduleNativeReconnect();
+        scheduleReconnect();
       }
     };
 
@@ -228,17 +213,16 @@ export default function HlsPlayer({
     document.addEventListener("visibilitychange", handleVisibilityChange);
     video.addEventListener("play", resumeAtLiveEdge);
     video.addEventListener("playing", handlePlaying);
-    video.addEventListener("error", scheduleNativeReconnect);
+    video.addEventListener("error", scheduleReconnect);
     video.addEventListener("stalled", handleStalled);
     void attach();
 
     return () => {
       cancelled = true;
-      authSubscription?.data.subscription.unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("play", resumeAtLiveEdge);
       video.removeEventListener("playing", handlePlaying);
-      video.removeEventListener("error", scheduleNativeReconnect);
+      video.removeEventListener("error", scheduleReconnect);
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
