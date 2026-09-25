@@ -111,16 +111,6 @@ export default function HlsPlayer({
         );
         playbackUrl.searchParams.set("ticket", ticket.token);
 
-        const playlistResponse = await fetch(playbackUrl, {
-          cache: "no-store",
-        });
-
-        if (!playlistResponse.ok) {
-          setFailed(true);
-          scheduleReconnect();
-          return;
-        }
-
         nativeRefreshTimer = setTimeout(
           () => void attach(),
           Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
