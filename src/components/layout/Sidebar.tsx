@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  ListChecks,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -26,6 +27,12 @@ const menuItems = [
     name: "Water Level",
     href: "/water-level",
     icon: Waves,
+    roles: ["admin", "client", "public"],
+  },
+  {
+    name: "Display Log",
+    href: "/display-log",
+    icon: ListChecks,
     roles: ["admin", "client", "public"],
   },
 ];

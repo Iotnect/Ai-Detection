@@ -13,37 +13,6 @@ const cameraFeeds = [
   { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah", src: "camera-1.v2.mp4" },
 ];
 
-const events = [
-  {
-    id: 1,
-    type: "Water Level Rising",
-    message: "Water level detected at Y = 612 (Warning)",
-    time: "2 minutes ago",
-    level: "warning",
-  },
-  {
-    id: 2,
-    type: "Normal",
-    message: "Water level stable at Y = 680",
-    time: "15 minutes ago",
-    level: "normal",
-  },
-  {
-    id: 3,
-    type: "AI Detection",
-    message: "Water surface successfully segmented",
-    time: "32 minutes ago",
-    level: "info",
-  },
-  {
-    id: 4,
-    type: "System",
-    message: "Model inference running normally",
-    time: "1 hour ago",
-    level: "info",
-  },
-];
-
 export default function DashboardPage() {
   const { user } = useAuth();
   const { detections, connectionState } = useDetectionStream();
@@ -234,8 +203,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-3">
-          {(detections.length
-            ? detections.map((detection) => ({
+          {!detections.length ? (
+            <p className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-8 text-center text-sm text-slate-500">
+              Waiting for AI inference events.
+            </p>
+          ) : (
+            detections.map((detection) => ({
                 id: `${detection.camera_id}-${detection.received_at}`,
                 type: detection.event_type,
                 message: detection.message,
@@ -244,9 +217,7 @@ export default function DashboardPage() {
                   detection.status.toUpperCase() === "NORMAL"
                     ? "normal"
                     : "warning",
-              }))
-            : events
-          ).map((event) => (
+              })).map((event) => (
             <div
               key={event.id}
               className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50"
@@ -270,7 +241,8 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-400 mt-0.5">{event.message}</p>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

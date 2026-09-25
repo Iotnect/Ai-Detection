@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { WebSocket } from "ws";
+import { z } from "zod";
 
 import {
   getRequestClientId,
@@ -15,6 +16,9 @@ const detectionStore = createDetectionStore();
 const dashboardClients = new Map<WebSocket, string | undefined>();
 const liveDetections = new Map<string, StoredDetection>();
 const lastPersistedAt = new Map<string, number>();
+const DetectionHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(1_000).default(500),
+});
 
 function secretsMatch(candidate: string, expected: string): boolean {
   const candidateBuffer = Buffer.from(candidate);
@@ -143,6 +147,33 @@ export async function detectionRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(503).send({
           error: "storage_unavailable",
           message: "Detections are temporarily unavailable.",
+        });
+      }
+    },
+  );
+
+  app.get(
+    "/detections/history",
+    { preHandler: requireDashboardAuthentication },
+    async (request, reply) => {
+      const query = DetectionHistoryQuerySchema.safeParse(request.query);
+
+      if (!query.success) {
+        return reply.code(400).send({ error: "invalid_history_query" });
+      }
+
+      try {
+        return {
+          data: await detectionStore.history(
+            getRequestClientId(request),
+            query.data.limit,
+          ),
+        };
+      } catch (error) {
+        request.log.error({ err: error }, "failed to read detection history");
+        return reply.code(503).send({
+          error: "storage_unavailable",
+          message: "Detection history is temporarily unavailable.",
         });
       }
     },
