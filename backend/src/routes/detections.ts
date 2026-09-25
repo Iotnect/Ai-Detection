@@ -76,7 +76,12 @@ async function latestDetections(clientId?: string): Promise<StoredDetection[]> {
     }
   }
 
-  return Array.from(combined.values());
+  const liveAfter = Date.now() - config.detectionLiveWindowMs;
+
+  return Array.from(combined.values()).filter((detection) => {
+    const receivedAt = new Date(detection.received_at).getTime();
+    return Number.isFinite(receivedAt) && receivedAt >= liveAfter;
+  });
 }
 
 export async function detectionRoutes(app: FastifyInstance): Promise<void> {

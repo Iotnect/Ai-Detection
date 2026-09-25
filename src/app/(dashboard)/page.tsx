@@ -203,7 +203,11 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-3">
-          {!detections.length ? (
+          {connectionState === "connecting" ? (
+            <p className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-8 text-center text-sm text-slate-500">
+              Connecting to AI event stream...
+            </p>
+          ) : !detections.length ? (
             <p className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-8 text-center text-sm text-slate-500">
               Waiting for AI inference events.
             </p>

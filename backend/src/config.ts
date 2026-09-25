@@ -11,6 +11,11 @@ const ConfigSchema = z.object({
     .int()
     .positive()
     .default(60_000),
+  DETECTION_LIVE_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(120_000),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(20).optional(),
   DSS_BASE_URL: z.string().url().optional(),
@@ -115,6 +120,7 @@ export const config = {
   aiServiceSecret: values.AI_SERVICE_SECRET,
   dashboardWebSocketSecret: values.DASHBOARD_WS_SECRET,
   detectionPersistIntervalMs: values.DETECTION_PERSIST_INTERVAL_MS,
+  detectionLiveWindowMs: values.DETECTION_LIVE_WINDOW_MS,
   supabase,
   dss: dss
     ? {

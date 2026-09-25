@@ -18,7 +18,6 @@ export default function WaterLevelPage() {
   const { events, isLoading } = useDetectionHistory(1_000);
   const live = detections.find((detection) => detection.camera_id === CAMERA_ID);
   const cameraHistory = events.filter((event) => event.camera_id === CAMERA_ID);
-  const latest = live ?? cameraHistory[0];
   const since = Date.now() - 24 * 60 * 60 * 1_000;
   const last24Hours = cameraHistory
     .filter((event) => new Date(event.timestamp).getTime() >= since)
@@ -40,16 +39,16 @@ export default function WaterLevelPage() {
           </p>
         </div>
         <span className={`text-xs ${connectionState === "online" ? "text-emerald-400" : "text-amber-400"}`}>
-          {connectionState === "online" ? "Live" : "Reconnecting"}
+          {connectionState === "online" ? "Backend connected" : "Reconnecting"}
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-400">Current Water Y</p>
-          <p className="mt-1 text-2xl font-bold text-white">{latest?.smoothed_y ?? "--"}</p>
-          <p className={`mt-1 text-xs ${statusColor(latest?.status)}`}>
-            {latest?.status ?? "Waiting for AI inference"}
+          <p className="mt-1 text-2xl font-bold text-white">{live?.smoothed_y ?? "--"}</p>
+          <p className={`mt-1 text-xs ${statusColor(live?.status)}`}>
+            {live?.status ?? "Waiting for live inference"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
