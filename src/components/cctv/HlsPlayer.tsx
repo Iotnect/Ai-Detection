@@ -143,12 +143,22 @@ export default function HlsPlayer({
             void video.play().catch(() => undefined);
           });
           hls.on(Hls.Events.ERROR, (_event, error) => {
-            if (!error.fatal) return;
-
             if (error.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls?.startLoad();
+              const statusCode = error.response?.code;
+
+              if (!error.fatal && statusCode !== 401 && statusCode !== 404) {
+                return;
+              }
+
+              setFailed(true);
+              hls?.destroy();
+              hls = undefined;
+              clearTimeout(nativeRetryTimer);
+              nativeRetryTimer = setTimeout(() => void attach(), 3_000);
               return;
             }
+
+            if (!error.fatal) return;
 
             if (error.type === Hls.ErrorTypes.MEDIA_ERROR) {
               hls?.recoverMediaError();
