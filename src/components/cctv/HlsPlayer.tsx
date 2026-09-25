@@ -127,20 +127,24 @@ export default function HlsPlayer({
         );
 
         if (Hls.isSupported()) {
-          hls = new Hls({
+          const player = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
             liveSyncDurationCount: 2,
             liveMaxLatencyDurationCount: 5,
             maxLiveSyncPlaybackRate: 1.5,
           });
-          hls.loadSource(playbackUrl.toString());
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          hls = player;
+          player.loadSource(playbackUrl.toString());
+          player.attachMedia(video);
+          player.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (hls !== player) return;
             setFailed(false);
             void video.play().catch(() => undefined);
           });
-          hls.on(Hls.Events.ERROR, (_event, error) => {
+          player.on(Hls.Events.ERROR, (_event, error) => {
+            if (hls !== player) return;
+
             if (error.type === Hls.ErrorTypes.NETWORK_ERROR) {
               const statusCode = error.response?.code;
 
@@ -149,7 +153,7 @@ export default function HlsPlayer({
               }
 
               setFailed(true);
-              hls?.destroy();
+              player.destroy();
               hls = undefined;
               scheduleReconnect();
               return;
@@ -158,12 +162,14 @@ export default function HlsPlayer({
             if (!error.fatal) return;
 
             if (error.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              hls?.recoverMediaError();
+              player.recoverMediaError();
               return;
             }
 
             setFailed(true);
-            hls?.destroy();
+            player.destroy();
+            hls = undefined;
+            scheduleReconnect();
           });
           return;
         }
@@ -179,6 +185,10 @@ export default function HlsPlayer({
         setFailed(true);
         scheduleReconnect();
       }
+    };
+
+    const scheduleNativeReconnect = () => {
+      if (!Hls.isSupported()) scheduleReconnect();
     };
 
     const resumeAtLiveEdge = () => {
@@ -197,7 +207,7 @@ export default function HlsPlayer({
 
     const handleStalled = () => {
       if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-        scheduleReconnect();
+        scheduleNativeReconnect();
       }
     };
 
@@ -213,7 +223,7 @@ export default function HlsPlayer({
     document.addEventListener("visibilitychange", handleVisibilityChange);
     video.addEventListener("play", resumeAtLiveEdge);
     video.addEventListener("playing", handlePlaying);
-    video.addEventListener("error", scheduleReconnect);
+    video.addEventListener("error", scheduleNativeReconnect);
     video.addEventListener("stalled", handleStalled);
     void attach();
 
@@ -222,7 +232,7 @@ export default function HlsPlayer({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("play", resumeAtLiveEdge);
       video.removeEventListener("playing", handlePlaying);
-      video.removeEventListener("error", scheduleReconnect);
+      video.removeEventListener("error", scheduleNativeReconnect);
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
