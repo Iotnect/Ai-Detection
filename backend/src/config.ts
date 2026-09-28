@@ -43,6 +43,8 @@ const ConfigSchema = z.object({
   MEDIAMTX_PUBLISH_PASSWORD: z.string().min(16).optional(),
   MEDIAMTX_AI_USER: z.string().min(1).optional(),
   MEDIAMTX_AI_PASSWORD: z.string().min(16).optional(),
+  MEDIAMTX_AI_PUBLISH_USER: z.string().min(1).optional(),
+  MEDIAMTX_AI_PUBLISH_PASSWORD: z.string().min(16).optional(),
   FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
   STREAM_TRANSCODE_H264: z
     .enum(["true", "false"])
@@ -101,6 +103,11 @@ const mediaMtxAuth = optionalGroup("MediaMTX authentication", {
   aiPassword: values.MEDIAMTX_AI_PASSWORD,
 });
 
+const mediaMtxAiPublishAuth = optionalGroup("MediaMTX AI publisher authentication", {
+  user: values.MEDIAMTX_AI_PUBLISH_USER,
+  password: values.MEDIAMTX_AI_PUBLISH_PASSWORD,
+});
+
 if (values.NODE_ENV === "production" && !supabase) {
   throw new Error("Supabase configuration is required in production");
 }
@@ -134,6 +141,7 @@ export const config = {
   mediaMtxPublishUrl: values.MEDIAMTX_PUBLISH_URL,
   mediaMtxHlsInternalUrl: values.MEDIAMTX_HLS_INTERNAL_URL,
   mediaMtxAuth,
+  mediaMtxAiPublishAuth,
   ffmpegPath: values.FFMPEG_PATH,
   streamTranscodeH264: values.STREAM_TRANSCODE_H264,
 };

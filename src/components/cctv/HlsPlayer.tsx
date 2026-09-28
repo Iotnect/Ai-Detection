@@ -10,6 +10,7 @@ interface HlsPlayerProps {
   className?: string;
   ariaLabel: string;
   onClick?: () => void;
+  onUnavailable?: () => void;
 }
 
 export default function HlsPlayer({
@@ -17,6 +18,7 @@ export default function HlsPlayer({
   className,
   ariaLabel,
   onClick,
+  onUnavailable,
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
@@ -31,6 +33,11 @@ export default function HlsPlayer({
     let generation = 0;
     let nativeRefreshTimer: ReturnType<typeof setTimeout> | undefined;
     let nativeRetryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const markUnavailable = () => {
+      setFailed(true);
+      onUnavailable?.();
+    };
 
     const stopPlayer = () => {
       generation += 1;
@@ -70,7 +77,7 @@ export default function HlsPlayer({
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
       if (!apiUrl) {
-        setFailed(true);
+        markUnavailable();
         return;
       }
 
@@ -78,7 +85,7 @@ export default function HlsPlayer({
         const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
 
         if (!streamPath) {
-          setFailed(true);
+          markUnavailable();
           return;
         }
 
@@ -100,7 +107,7 @@ export default function HlsPlayer({
           cancelled ||
           currentGeneration !== generation
         ) {
-          setFailed(true);
+          markUnavailable();
           scheduleReconnect();
           return;
         }
@@ -142,7 +149,7 @@ export default function HlsPlayer({
                 return;
               }
 
-              setFailed(true);
+              markUnavailable();
               player.destroy();
               hls = undefined;
               scheduleReconnect();
@@ -156,7 +163,7 @@ export default function HlsPlayer({
               return;
             }
 
-            setFailed(true);
+            markUnavailable();
             player.destroy();
             hls = undefined;
             scheduleReconnect();
@@ -170,9 +177,9 @@ export default function HlsPlayer({
           return;
         }
 
-        setFailed(true);
+        markUnavailable();
       } catch {
-        setFailed(true);
+        markUnavailable();
         scheduleReconnect();
       }
     };
@@ -226,7 +233,7 @@ export default function HlsPlayer({
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
-  }, [src]);
+  }, [src, onUnavailable]);
 
   return (
     <div className="relative h-full w-full bg-black">

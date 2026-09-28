@@ -16,6 +16,10 @@ const AuthRequestSchema = z.object({
   protocol: z.string().default(""),
 });
 
+const ORIGINAL_STREAM_PATH = "mbs-kdn-c1";
+const AI_STREAM_PATH = "mbs-kdn-c1-ai";
+const readablePaths = new Set([ORIGINAL_STREAM_PATH, AI_STREAM_PATH]);
+
 function valueMatches(candidate: string, expected: string): boolean {
   const candidateBuffer = Buffer.from(candidate);
   const expectedBuffer = Buffer.from(expected);
@@ -30,7 +34,7 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth", async (request, reply) => {
     const parsed = AuthRequestSchema.safeParse(request.body);
 
-    if (!parsed.success || parsed.data.path !== "mbs-kdn-c1") {
+    if (!parsed.success || !readablePaths.has(parsed.data.path)) {
       return reply.code(401).send();
     }
 
@@ -45,8 +49,21 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
 
     if (
       input.action === "publish" &&
+      input.path === ORIGINAL_STREAM_PATH &&
       valueMatches(input.user, auth.publishUser) &&
       valueMatches(input.password, auth.publishPassword)
+    ) {
+      return reply.code(204).send();
+    }
+
+    const aiPublisher = config.mediaMtxAiPublishAuth;
+
+    if (
+      input.action === "publish" &&
+      input.path === AI_STREAM_PATH &&
+      aiPublisher &&
+      valueMatches(input.user, aiPublisher.user) &&
+      valueMatches(input.password, aiPublisher.password)
     ) {
       return reply.code(204).send();
     }

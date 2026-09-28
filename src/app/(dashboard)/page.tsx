@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Activity, Maximize2, VideoOff, X } from "lucide-react";
 import HlsPlayer from "@/components/cctv/HlsPlayer";
@@ -8,6 +8,9 @@ import { useDetectionStream } from "@/hooks/useDetectionStream";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const liveHlsUrl = process.env.NEXT_PUBLIC_HLS_URL;
+const aiHlsUrl = liveHlsUrl
+  ? new URL("/mbs-kdn-c1-ai/index.m3u8", liveHlsUrl).toString()
+  : undefined;
 
 const cameraFeeds = [
   { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah", src: "camera-1.v2.mp4" },
@@ -19,7 +22,10 @@ export default function DashboardPage() {
   const [selectedCamera, setSelectedCamera] = useState<
     (typeof cameraFeeds)[number] | null
   >(null);
+  const [streamMode, setStreamMode] = useState<"original" | "ai">("original");
   const canViewLiveFeed = Boolean(user);
+  const selectedHlsUrl = streamMode === "ai" ? aiHlsUrl : liveHlsUrl;
+  const handleAiUnavailable = useCallback(() => setStreamMode("original"), []);
 
   useEffect(() => {
     if (!selectedCamera) return;
@@ -59,7 +65,39 @@ export default function DashboardPage() {
               Real-time monitoring from MBS-KDN-C1
             </p>
           </div>
-          <span className="text-xs text-slate-500 whitespace-nowrap">1 camera</span>
+          <div className="flex items-center gap-2">
+            {liveHlsUrl && (
+              <div
+                className="flex rounded-lg border border-slate-700 bg-slate-900 p-1"
+                aria-label="Camera stream mode"
+              >
+                <button
+                  type="button"
+                  onClick={() => setStreamMode("original")}
+                  className={`rounded-md px-3 py-1 text-xs transition ${
+                    streamMode === "original"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Original
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStreamMode("ai")}
+                  disabled={!aiHlsUrl}
+                  className={`rounded-md px-3 py-1 text-xs transition ${
+                    streamMode === "ai"
+                      ? "bg-violet-600 text-white"
+                      : "text-slate-400 hover:text-white"
+                  } disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  AI Detection
+                </button>
+              </div>
+            )}
+            <span className="text-xs text-slate-500 whitespace-nowrap">1 camera</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -71,12 +109,16 @@ export default function DashboardPage() {
               <div className="aspect-video bg-black relative">
                 {canViewLiveFeed ? (
                   <>
-                    {liveHlsUrl ? (
+                    {selectedHlsUrl ? (
                       <HlsPlayer
+                        key={streamMode}
                         className="h-full w-full object-cover cursor-zoom-in"
-                        src={liveHlsUrl}
-                        ariaLabel={`${camera.name} live camera footage`}
+                        src={selectedHlsUrl}
+                        ariaLabel={`${camera.name} ${streamMode} live camera footage`}
                         onClick={() => setSelectedCamera(camera)}
+                        onUnavailable={
+                          streamMode === "ai" ? handleAiUnavailable : undefined
+                        }
                       />
                     ) : (
                       <video
@@ -96,7 +138,11 @@ export default function DashboardPage() {
                     <div className="absolute top-3 left-3 flex items-center gap-2 rounded-md bg-black/65 px-2.5 py-1 pointer-events-none">
                       <span className="w-2 h-2 rounded-full bg-amber-400" />
                       <span className="text-[11px] text-white font-semibold tracking-wide">
-                        {liveHlsUrl ? "LIVE" : "DEMO REPLAY"}
+                        {selectedHlsUrl
+                          ? streamMode === "ai"
+                            ? "AI LIVE"
+                            : "LIVE"
+                          : "DEMO REPLAY"}
                       </span>
                     </div>
 
@@ -146,7 +192,11 @@ export default function DashboardPage() {
                   {selectedCamera.name}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  {selectedCamera.location} &middot; {liveHlsUrl ? "Live" : "Demo replay"}
+                  {selectedCamera.location} &middot; {selectedHlsUrl
+                    ? streamMode === "ai"
+                      ? "AI Detection"
+                      : "Original live"
+                    : "Demo replay"}
                 </p>
               </div>
               <button
@@ -160,12 +210,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="aspect-video bg-black">
-              {liveHlsUrl ? (
+              {selectedHlsUrl ? (
                 <HlsPlayer
-                  key={selectedCamera.id}
+                  key={`${selectedCamera.id}-${streamMode}`}
                   className="h-full w-full object-contain"
-                  src={liveHlsUrl}
-                  ariaLabel={`${selectedCamera.name} enlarged live camera footage`}
+                  src={selectedHlsUrl}
+                  ariaLabel={`${selectedCamera.name} enlarged ${streamMode} live camera footage`}
+                  onUnavailable={
+                    streamMode === "ai" ? handleAiUnavailable : undefined
+                  }
                 />
               ) : (
                 <video

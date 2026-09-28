@@ -1,0 +1,39 @@
+FROM bluenviron/mediamtx:1.19.2 AS mediamtx
+
+FROM node:24-bookworm-slim AS build
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+FROM node:24-bookworm-slim AS runtime
+
+ENV NODE_ENV=production \
+  MTX_RTMP=no \
+  MTX_WEBRTC=no \
+  MTX_SRT=no \
+  MTX_MOQ=no \
+  MTX_RTSPTRANSPORTS=tcp
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates ffmpeg supervisor \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=mediamtx /mediamtx /usr/local/bin/mediamtx
+COPY --from=mediamtx /mediamtx.yml ./mediamtx.yml
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev \
+  && npm cache clean --force
+
+COPY --from=build /app/dist ./dist
+COPY supervisord.runpod.conf ./supervisord.conf
+
+USER node
+EXPOSE 4000 8554
+
+CMD ["supervisord", "-c", "/app/supervisord.conf"]

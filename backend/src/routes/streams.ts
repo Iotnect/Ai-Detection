@@ -17,6 +17,17 @@ const StreamTicketRequestSchema = z.object({
   path: z.string().min(1),
 });
 
+const ORIGINAL_STREAM_PATH = "mbs-kdn-c1";
+const AI_STREAM_PATH = "mbs-kdn-c1-ai";
+
+function cameraPathForStream(streamPath: string): string | undefined {
+  if (streamPath === ORIGINAL_STREAM_PATH || streamPath === AI_STREAM_PATH) {
+    return ORIGINAL_STREAM_PATH;
+  }
+
+  return undefined;
+}
+
 function appendTicket(uri: string, ticket: string): string {
   if (uri.startsWith("data:")) return uri;
 
@@ -71,11 +82,17 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(503).send({ error: "stream_auth_unavailable" });
       }
 
+      const cameraPath = cameraPathForStream(parsed.data.path);
+
+      if (!cameraPath) {
+        return reply.code(403).send({ error: "stream_forbidden" });
+      }
+
       const { data: camera } = await supabase
         .from("cameras")
         .select("id")
         .eq("client_id", clientId)
-        .eq("stream_path", parsed.data.path)
+        .eq("stream_path", cameraPath)
         .maybeSingle();
 
       if (!camera) {
