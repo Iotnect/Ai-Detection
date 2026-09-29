@@ -19,10 +19,22 @@ export default function WaterLevelPage() {
   const live = detections.find((detection) => detection.camera_id === CAMERA_ID);
   const cameraHistory = events.filter((event) => event.camera_id === CAMERA_ID);
   const since = Date.now() - 24 * 60 * 60 * 1_000;
-  const last24Hours = cameraHistory
+  const persistedLast24Hours = cameraHistory
     .filter((event) => new Date(event.timestamp).getTime() >= since)
     .slice()
-    .reverse();
+    .sort(
+      (left, right) =>
+        new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+    );
+  const latestPersisted = persistedLast24Hours.at(-1);
+  const liveTimestamp = live ? new Date(live.timestamp).getTime() : Number.NaN;
+  const latestPersistedTimestamp = latestPersisted
+    ? new Date(latestPersisted.timestamp).getTime()
+    : Number.NEGATIVE_INFINITY;
+  const last24Hours =
+    live && Number.isFinite(liveTimestamp) && liveTimestamp > latestPersistedTimestamp
+      ? [...persistedLast24Hours, live]
+      : persistedLast24Hours;
   const values = last24Hours.map((event) => event.smoothed_y);
   const minY = values.length ? Math.min(...values) : undefined;
   const maxY = values.length ? Math.max(...values) : undefined;
