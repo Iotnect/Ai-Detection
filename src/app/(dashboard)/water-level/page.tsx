@@ -6,6 +6,16 @@ import { useDetectionHistory } from "@/hooks/useDetectionHistory";
 import { useDetectionStream } from "@/hooks/useDetectionStream";
 
 const CAMERA_ID = "MBS-KDN-C1";
+const MAX_CHART_BARS = 180;
+
+function evenlySample<T>(items: T[], maximum: number): T[] {
+  if (items.length <= maximum) return items;
+
+  const lastIndex = items.length - 1;
+  return Array.from({ length: maximum }, (_, index) =>
+    items[Math.round((index * lastIndex) / (maximum - 1))],
+  );
+}
 
 function statusColor(status?: string): string {
   if (status?.toUpperCase() === "DANGER") return "text-red-400";
@@ -35,6 +45,7 @@ export default function WaterLevelPage() {
     live && Number.isFinite(liveTimestamp) && liveTimestamp > latestPersistedTimestamp
       ? [...persistedLast24Hours, live]
       : persistedLast24Hours;
+  const chartEvents = evenlySample(last24Hours, MAX_CHART_BARS);
   const values = last24Hours.map((event) => event.smoothed_y);
   const minY = values.length ? Math.min(...values) : undefined;
   const maxY = values.length ? Math.max(...values) : undefined;
@@ -98,8 +109,8 @@ export default function WaterLevelPage() {
           </div>
         ) : (
           <>
-            <div className="flex h-64 items-end gap-1 overflow-hidden border-b border-slate-700">
-              {last24Hours.map((event) => {
+            <div className="flex h-64 items-end gap-px overflow-hidden border-b border-slate-700">
+              {chartEvents.map((event) => {
                 const height = 15 + ((event.smoothed_y - chartMin) / chartRange) * 80;
                 const color = event.status.toUpperCase() === "NORMAL"
                   ? "bg-blue-500/80 hover:bg-blue-400"
@@ -110,7 +121,7 @@ export default function WaterLevelPage() {
                 return (
                   <div
                     key={`${event.camera_id}-${event.received_at}`}
-                    className={`min-w-1 flex-1 rounded-t transition ${color}`}
+                    className={`min-w-0 flex-1 rounded-t transition ${color}`}
                     style={{ height: `${height}%` }}
                     title={`${new Date(event.timestamp).toLocaleString("en-MY")} • Y ${event.smoothed_y} • ${event.status}`}
                   />
