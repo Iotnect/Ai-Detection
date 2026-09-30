@@ -14,6 +14,20 @@ import { useDetectionHistory } from "@/hooks/useDetectionHistory";
 
 const PAGE_SIZE = 25;
 const STATUS_OPTIONS = ["NORMAL", "RISING", "DANGER"] as const;
+const MALAYSIA_TIME_ZONE = "Asia/Kuala_Lumpur";
+
+function malaysiaDateKey(value: string | Date): string {
+  const parts = new Intl.DateTimeFormat("en-MY", {
+    timeZone: MALAYSIA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(typeof value === "string" ? new Date(value) : value);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
 
 function statusClassName(status: string): string {
   switch (status.toUpperCase()) {
@@ -32,7 +46,7 @@ function csvCell(value: unknown): string {
 }
 
 function fileDate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return malaysiaDateKey(new Date());
 }
 
 export default function DisplayLogPage() {
@@ -40,6 +54,7 @@ export default function DisplayLogPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [pdfDate, setPdfDate] = useState(fileDate);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -65,6 +80,10 @@ export default function DisplayLogPage() {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filteredEvents.slice(start, start + PAGE_SIZE);
   }, [currentPage, filteredEvents]);
+  const pdfEvents = useMemo(
+    () => filteredEvents.filter((event) => malaysiaDateKey(event.timestamp) === pdfDate),
+    [filteredEvents, pdfDate],
+  );
 
   useEffect(() => {
     setPage(1);
@@ -122,11 +141,15 @@ export default function DisplayLogPage() {
       document.setFontSize(16);
       document.text("MBS-KDN Flood Detection Event Log", 14, 16);
       document.setFontSize(9);
-      document.text(`Exported: ${new Date().toLocaleString("en-MY")}`, 14, 22);
+      document.text(
+        `Date: ${new Date(`${pdfDate}T00:00:00+08:00`).toLocaleDateString("en-MY")} | Exported: ${new Date().toLocaleString("en-MY")}`,
+        14,
+        22,
+      );
       autoTable(document, {
         startY: 27,
         head: [["Time", "Camera", "Event", "Status", "Raw Y", "Smooth Y", "Confidence", "Message"]],
-        body: filteredEvents.map((event) => [
+        body: pdfEvents.map((event) => [
           new Date(event.timestamp).toLocaleString("en-MY"),
           event.camera_id,
           event.event_type,
@@ -139,7 +162,7 @@ export default function DisplayLogPage() {
         styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [37, 99, 235] },
       });
-      document.save(`mbs-event-log-${fileDate()}.pdf`);
+      document.save(`mbs-event-log-${pdfDate}.pdf`);
     } finally {
       setIsExportingPdf(false);
     }
@@ -154,7 +177,7 @@ export default function DisplayLogPage() {
             Historical water-level events for MBS-KDN-C1
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <button
             type="button"
             onClick={exportCsv}
@@ -163,14 +186,25 @@ export default function DisplayLogPage() {
           >
             <Download size={16} /> Export CSV
           </button>
+          <label className="flex flex-col gap-1 text-xs text-slate-400">
+            PDF date
+            <input
+              type="date"
+              value={pdfDate}
+              max={fileDate()}
+              onChange={(event) => setPdfDate(event.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+            />
+          </label>
           <button
             type="button"
             onClick={() => void exportPdf()}
-            disabled={!filteredEvents.length || isExportingPdf}
+            disabled={!pdfDate || !pdfEvents.length || isExportingPdf}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+            title={pdfEvents.length ? `Export ${pdfEvents.length} records for ${pdfDate}` : `No records for ${pdfDate}`}
           >
             <FileText size={16} />
-            {isExportingPdf ? "Preparing..." : "Export PDF"}
+            {isExportingPdf ? "Preparing..." : `Export PDF (${pdfEvents.length})`}
           </button>
         </div>
       </div>
