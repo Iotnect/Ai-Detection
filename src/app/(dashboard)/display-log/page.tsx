@@ -49,12 +49,20 @@ function fileDate(): string {
   return malaysiaDateKey(new Date());
 }
 
+function displayDate(date: string): string {
+  return new Date(`${date}T00:00:00+08:00`).toLocaleDateString("en-MY", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function DisplayLogPage() {
   const { events, isLoading, error, refresh } = useDetectionHistory(1_000);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(1);
-  const [pdfDate, setPdfDate] = useState(fileDate);
+  const [pdfDate, setPdfDate] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -80,6 +88,13 @@ export default function DisplayLogPage() {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filteredEvents.slice(start, start + PAGE_SIZE);
   }, [currentPage, filteredEvents]);
+  const availablePdfDates = useMemo(
+    () =>
+      Array.from(new Set(events.map((event) => malaysiaDateKey(event.timestamp))))
+        .filter(Boolean)
+        .sort((left, right) => right.localeCompare(left)),
+    [events],
+  );
   const pdfEvents = useMemo(
     () => filteredEvents.filter((event) => malaysiaDateKey(event.timestamp) === pdfDate),
     [filteredEvents, pdfDate],
@@ -92,6 +107,14 @@ export default function DisplayLogPage() {
   useEffect(() => {
     setPage((current) => Math.min(current, pageCount));
   }, [pageCount]);
+
+  useEffect(() => {
+    setPdfDate((current) =>
+      current && availablePdfDates.includes(current)
+        ? current
+        : (availablePdfDates[0] ?? ""),
+    );
+  }, [availablePdfDates]);
 
   const exportCsv = () => {
     const header = [
@@ -188,13 +211,19 @@ export default function DisplayLogPage() {
           </button>
           <label className="flex flex-col gap-1 text-xs text-slate-400">
             PDF date
-            <input
-              type="date"
+            <select
               value={pdfDate}
-              max={fileDate()}
               onChange={(event) => setPdfDate(event.target.value)}
+              disabled={!availablePdfDates.length}
               className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
-            />
+            >
+              {!availablePdfDates.length ? <option value="">No dates available</option> : null}
+              {availablePdfDates.map((date) => (
+                <option key={date} value={date}>
+                  {displayDate(date)}
+                </option>
+              ))}
+            </select>
           </label>
           <button
             type="button"
