@@ -45,10 +45,6 @@ function csvCell(value: unknown): string {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
-function fileDate(): string {
-  return malaysiaDateKey(new Date());
-}
-
 function displayDate(date: string): string {
   return new Date(`${date}T00:00:00+08:00`).toLocaleDateString("en-MY", {
     day: "2-digit",
@@ -62,7 +58,7 @@ export default function DisplayLogPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(1);
-  const [pdfDate, setPdfDate] = useState("");
+  const [exportDate, setExportDate] = useState("");
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -88,16 +84,16 @@ export default function DisplayLogPage() {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filteredEvents.slice(start, start + PAGE_SIZE);
   }, [currentPage, filteredEvents]);
-  const availablePdfDates = useMemo(
+  const availableExportDates = useMemo(
     () =>
       Array.from(new Set(events.map((event) => malaysiaDateKey(event.timestamp))))
         .filter(Boolean)
         .sort((left, right) => right.localeCompare(left)),
     [events],
   );
-  const pdfEvents = useMemo(
-    () => filteredEvents.filter((event) => malaysiaDateKey(event.timestamp) === pdfDate),
-    [filteredEvents, pdfDate],
+  const exportEvents = useMemo(
+    () => filteredEvents.filter((event) => malaysiaDateKey(event.timestamp) === exportDate),
+    [exportDate, filteredEvents],
   );
 
   useEffect(() => {
@@ -109,12 +105,12 @@ export default function DisplayLogPage() {
   }, [pageCount]);
 
   useEffect(() => {
-    setPdfDate((current) =>
-      current && availablePdfDates.includes(current)
+    setExportDate((current) =>
+      current && availableExportDates.includes(current)
         ? current
-        : (availablePdfDates[0] ?? ""),
+        : (availableExportDates[0] ?? ""),
     );
-  }, [availablePdfDates]);
+  }, [availableExportDates]);
 
   const exportCsv = () => {
     const header = [
@@ -127,7 +123,7 @@ export default function DisplayLogPage() {
       "Confidence",
       "Message",
     ];
-    const rows = filteredEvents.map((event) => [
+    const rows = exportEvents.map((event) => [
       event.timestamp,
       event.camera_id,
       event.event_type,
@@ -146,7 +142,7 @@ export default function DisplayLogPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `mbs-event-log-${fileDate()}.csv`;
+    anchor.download = `mbs-event-log-${exportDate}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -165,14 +161,14 @@ export default function DisplayLogPage() {
       document.text("MBS-KDN Flood Detection Event Log", 14, 16);
       document.setFontSize(9);
       document.text(
-        `Date: ${new Date(`${pdfDate}T00:00:00+08:00`).toLocaleDateString("en-MY")} | Exported: ${new Date().toLocaleString("en-MY")}`,
+        `Date: ${new Date(`${exportDate}T00:00:00+08:00`).toLocaleDateString("en-MY")} | Exported: ${new Date().toLocaleString("en-MY")}`,
         14,
         22,
       );
       autoTable(document, {
         startY: 27,
         head: [["Time", "Camera", "Event", "Status", "Raw Y", "Smooth Y", "Confidence", "Message"]],
-        body: pdfEvents.map((event) => [
+        body: exportEvents.map((event) => [
           new Date(event.timestamp).toLocaleString("en-MY"),
           event.camera_id,
           event.event_type,
@@ -185,7 +181,7 @@ export default function DisplayLogPage() {
         styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [37, 99, 235] },
       });
-      document.save(`mbs-event-log-${pdfDate}.pdf`);
+      document.save(`mbs-event-log-${exportDate}.pdf`);
     } finally {
       setIsExportingPdf(false);
     }
@@ -201,24 +197,16 @@ export default function DisplayLogPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={!filteredEvents.length}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Download size={16} /> Export CSV
-          </button>
           <label className="flex flex-col gap-1 text-xs text-slate-400">
-            PDF date
+            Export date
             <select
-              value={pdfDate}
-              onChange={(event) => setPdfDate(event.target.value)}
-              disabled={!availablePdfDates.length}
+              value={exportDate}
+              onChange={(event) => setExportDate(event.target.value)}
+              disabled={!availableExportDates.length}
               className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
             >
-              {!availablePdfDates.length ? <option value="">No dates available</option> : null}
-              {availablePdfDates.map((date) => (
+              {!availableExportDates.length ? <option value="">No dates available</option> : null}
+              {availableExportDates.map((date) => (
                 <option key={date} value={date}>
                   {displayDate(date)}
                 </option>
@@ -227,13 +215,22 @@ export default function DisplayLogPage() {
           </label>
           <button
             type="button"
+            onClick={exportCsv}
+            disabled={!exportDate || !exportEvents.length}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+            title={exportEvents.length ? `Export ${exportEvents.length} records for ${exportDate}` : `No records for ${exportDate}`}
+          >
+            <Download size={16} /> Export CSV ({exportEvents.length})
+          </button>
+          <button
+            type="button"
             onClick={() => void exportPdf()}
-            disabled={!pdfDate || !pdfEvents.length || isExportingPdf}
+            disabled={!exportDate || !exportEvents.length || isExportingPdf}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-            title={pdfEvents.length ? `Export ${pdfEvents.length} records for ${pdfDate}` : `No records for ${pdfDate}`}
+            title={exportEvents.length ? `Export ${exportEvents.length} records for ${exportDate}` : `No records for ${exportDate}`}
           >
             <FileText size={16} />
-            {isExportingPdf ? "Preparing..." : `Export PDF (${pdfEvents.length})`}
+            {isExportingPdf ? "Preparing..." : `Export PDF (${exportEvents.length})`}
           </button>
         </div>
       </div>
