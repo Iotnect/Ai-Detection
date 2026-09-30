@@ -1,9 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Download, FileText, RefreshCw, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 
 import { useDetectionHistory } from "@/hooks/useDetectionHistory";
+
+const PAGE_SIZE = 25;
+const STATUS_OPTIONS = ["NORMAL", "RISING", "DANGER"] as const;
+
+function statusClassName(status: string): string {
+  switch (status.toUpperCase()) {
+    case "DANGER":
+      return "bg-red-500/10 text-red-400";
+    case "RISING":
+    case "WARNING":
+      return "bg-amber-500/10 text-amber-400";
+    default:
+      return "bg-emerald-500/10 text-emerald-400";
+  }
+}
 
 function csvCell(value: unknown): string {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -17,12 +39,9 @@ export default function DisplayLogPage() {
   const { events, isLoading, error, refresh } = useDetectionHistory(1_000);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  const statuses = useMemo(
-    () => Array.from(new Set(events.map((event) => event.status.toUpperCase()))),
-    [events],
-  );
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -39,6 +58,21 @@ export default function DisplayLogPage() {
       return matchesStatus && matchesQuery;
     });
   }, [events, query, status]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginatedEvents = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredEvents.slice(start, start + PAGE_SIZE);
+  }, [currentPage, filteredEvents]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
 
   const exportCsv = () => {
     const header = [
@@ -163,9 +197,9 @@ export default function DisplayLogPage() {
             aria-label="Filter by status"
           >
             <option value="ALL">All statuses</option>
-            {statuses.map((eventStatus) => (
+            {STATUS_OPTIONS.map((eventStatus) => (
               <option key={eventStatus} value={eventStatus}>
-                {eventStatus}
+                {eventStatus === "RISING" ? "Rising" : eventStatus === "DANGER" ? "Danger" : "Normal"}
               </option>
             ))}
           </select>
@@ -206,7 +240,7 @@ export default function DisplayLogPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {filteredEvents.map((event) => (
+                {paginatedEvents.map((event) => (
                   <tr key={`${event.camera_id}-${event.received_at}`} className="hover:bg-slate-800/40">
                     <td className="whitespace-nowrap px-4 py-3 text-slate-400">
                       {new Date(event.timestamp).toLocaleString("en-MY")}
@@ -216,7 +250,7 @@ export default function DisplayLogPage() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-300">{event.event_type}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${event.status.toUpperCase() === "NORMAL" ? "bg-emerald-500/10 text-emerald-400" : event.status.toUpperCase() === "DANGER" ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}>
+                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusClassName(event.status)}`}>
                         {event.status}
                       </span>
                     </td>
@@ -231,6 +265,35 @@ export default function DisplayLogPage() {
             </table>
           </div>
         )}
+
+        {!isLoading && !error && filteredEvents.length > 0 ? (
+          <div className="flex flex-col gap-3 border-t border-slate-800 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-slate-500">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredEvents.length)} of {filteredEvents.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 transition hover:border-blue-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft size={15} /> Previous
+              </button>
+              <span className="min-w-24 text-center text-slate-400">
+                Page {currentPage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                disabled={currentPage === pageCount}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 transition hover:border-blue-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next <ChevronRight size={15} />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
