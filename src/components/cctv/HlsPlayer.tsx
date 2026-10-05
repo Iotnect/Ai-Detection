@@ -74,7 +74,7 @@ export default function HlsPlayer({
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 
       if (!apiUrl) {
         markUnavailable();

@@ -11,7 +11,7 @@ export function useDetectionHistory(limit = 500) {
   const [error, setError] = useState<string>();
 
   const refresh = useCallback(async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
     if (!apiUrl) {
       setError("Backend API is not configured.");
       setIsLoading(false);
