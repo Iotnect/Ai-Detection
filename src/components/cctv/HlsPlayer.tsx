@@ -9,6 +9,7 @@ interface HlsPlayerProps {
   src: string;
   className?: string;
   ariaLabel: string;
+  targetLatencySeconds?: number;
   onClick?: () => void;
   onUnavailable?: () => void;
 }
@@ -17,6 +18,7 @@ export default function HlsPlayer({
   src,
   className,
   ariaLabel,
+  targetLatencySeconds,
   onClick,
   onUnavailable,
 }: HlsPlayerProps) {
@@ -125,13 +127,23 @@ export default function HlsPlayer({
         );
 
         if (Hls.isSupported()) {
-          const player = new Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            liveSyncDurationCount: 2,
-            liveMaxLatencyDurationCount: 5,
-            maxLiveSyncPlaybackRate: 1.5,
-          });
+          const player = new Hls(
+            targetLatencySeconds
+              ? {
+                  enableWorker: true,
+                  lowLatencyMode: false,
+                  liveSyncDuration: targetLatencySeconds,
+                  liveMaxLatencyDuration: targetLatencySeconds * 2,
+                  maxBufferLength: Math.max(30, targetLatencySeconds * 2),
+                }
+              : {
+                  enableWorker: true,
+                  lowLatencyMode: true,
+                  liveSyncDurationCount: 2,
+                  liveMaxLatencyDurationCount: 5,
+                  maxLiveSyncPlaybackRate: 1.5,
+                },
+          );
           hls = player;
           player.loadSource(playbackUrl.toString());
           player.attachMedia(video);
@@ -249,7 +261,7 @@ export default function HlsPlayer({
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
-  }, [src, onUnavailable]);
+  }, [src, targetLatencySeconds, onUnavailable]);
 
   return (
     <div className="relative h-full w-full bg-black">

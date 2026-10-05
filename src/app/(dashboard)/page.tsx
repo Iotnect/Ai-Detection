@@ -115,6 +115,7 @@ export default function DashboardPage() {
                         className="h-full w-full object-cover cursor-zoom-in"
                         src={selectedHlsUrl}
                         ariaLabel={`${camera.name} ${streamMode} live camera footage`}
+                        targetLatencySeconds={streamMode === "original" ? 10 : undefined}
                         onClick={() => setSelectedCamera(camera)}
                         onUnavailable={
                           streamMode === "ai" ? handleAiUnavailable : undefined
@@ -216,6 +217,7 @@ export default function DashboardPage() {
                   className="h-full w-full object-contain"
                   src={selectedHlsUrl}
                   ariaLabel={`${selectedCamera.name} enlarged ${streamMode} live camera footage`}
+                  targetLatencySeconds={streamMode === "original" ? 10 : undefined}
                   onUnavailable={
                     streamMode === "ai" ? handleAiUnavailable : undefined
                   }
