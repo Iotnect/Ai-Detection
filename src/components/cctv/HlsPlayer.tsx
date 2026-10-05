@@ -133,8 +133,8 @@ export default function HlsPlayer({
                   enableWorker: true,
                   lowLatencyMode: false,
                   liveSyncDuration: targetLatencySeconds,
-                  liveMaxLatencyDuration: targetLatencySeconds * 2,
-                  maxBufferLength: Math.max(30, targetLatencySeconds * 2),
+                  liveMaxLatencyDuration: targetLatencySeconds * 3,
+                  maxBufferLength: Math.max(15, targetLatencySeconds * 3),
                 }
               : {
                   enableWorker: true,
