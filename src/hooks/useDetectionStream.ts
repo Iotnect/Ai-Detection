@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { supabase } from "@/lib/supabase";
 
 export interface LiveDetection {
@@ -33,72 +34,124 @@ export function useDetectionStream() {
     let socket: WebSocket | undefined;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
+    let connectionAttempt = 0;
+
+    const clearRetry = () => {
+      clearTimeout(retryTimer);
+      retryTimer = undefined;
+    };
+
+    const scheduleReconnect = (delay = 3_000) => {
+      if (stopped) return;
+      clearRetry();
+      retryTimer = setTimeout(() => void connect(), delay);
+    };
+
+    const closeSocket = () => {
+      const currentSocket = socket;
+      socket = undefined;
+      currentSocket?.close();
+    };
 
     const connect = async () => {
+      const attempt = ++connectionAttempt;
+      clearRetry();
       setConnectionState("connecting");
-      const { data } = await client.auth.getSession();
-      const accessToken = data.session?.access_token;
 
-      if (!accessToken || stopped) {
-        setConnectionState("offline");
-        return;
-      }
+      try {
+        const ticketResponse = await authenticatedFetch(
+          `${apiUrl}/api/v1/ws-ticket`,
+          { method: "POST" },
+        );
+        const ticket = (await ticketResponse.json()) as { token?: string };
 
-      const ticketResponse = await fetch(`${apiUrl}/api/v1/ws-ticket`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const ticket = (await ticketResponse.json()) as { token?: string };
+        if (stopped || attempt !== connectionAttempt) return;
 
-      if (!ticketResponse.ok || !ticket.token || stopped) {
-        setConnectionState("offline");
-        retryTimer = setTimeout(() => void connect(), 3_000);
-        return;
-      }
-
-      const url = new URL("/api/v1/ws/detections", apiUrl);
-      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      url.searchParams.set("ticket", ticket.token);
-      socket = new WebSocket(url);
-
-      socket.addEventListener("open", () => setConnectionState("online"));
-      socket.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data) as {
-          type: string;
-          data?: LiveDetection | LiveDetection[];
-        };
-
-        if (message.type === "snapshot" && Array.isArray(message.data)) {
-          setDetections(message.data);
+        if (!ticketResponse.ok || !ticket.token) {
+          setConnectionState("offline");
+          scheduleReconnect();
+          return;
         }
 
-        if (message.type === "detection" && message.data && !Array.isArray(message.data)) {
-          const detection = message.data;
-          setDetections((current) => [
-            detection,
-            ...current.filter(
-              (currentDetection) =>
-                currentDetection.camera_id !== detection.camera_id,
-            ),
-          ]);
-        }
-      });
-      socket.addEventListener("close", () => {
-        if (stopped) return;
+        const url = new URL("/api/v1/ws/detections", apiUrl);
+        url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+        url.searchParams.set("ticket", ticket.token);
+        const nextSocket = new WebSocket(url);
+        socket = nextSocket;
+
+        nextSocket.addEventListener("open", () => {
+          if (socket === nextSocket) setConnectionState("online");
+        });
+        nextSocket.addEventListener("message", (event) => {
+          if (socket !== nextSocket) return;
+
+          const message = JSON.parse(event.data) as {
+            type: string;
+            data?: LiveDetection | LiveDetection[];
+          };
+
+          if (message.type === "snapshot" && Array.isArray(message.data)) {
+            setDetections(message.data);
+          }
+
+          if (
+            message.type === "detection" &&
+            message.data &&
+            !Array.isArray(message.data)
+          ) {
+            const detection = message.data;
+            setDetections((current) => [
+              detection,
+              ...current.filter(
+                (currentDetection) =>
+                  currentDetection.camera_id !== detection.camera_id,
+              ),
+            ]);
+          }
+        });
+        nextSocket.addEventListener("close", () => {
+          if (socket === nextSocket) socket = undefined;
+          if (stopped || attempt !== connectionAttempt) return;
+          setConnectionState("offline");
+          scheduleReconnect();
+        });
+        nextSocket.addEventListener("error", () => nextSocket.close());
+      } catch {
+        if (stopped || attempt !== connectionAttempt) return;
         setConnectionState("offline");
-        retryTimer = setTimeout(() => void connect(), 3_000);
-      });
-      socket.addEventListener("error", () => socket?.close());
+        scheduleReconnect();
+      }
     };
 
     void connect();
 
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((event) => {
+      if (stopped) return;
+
+      if (event === "SIGNED_OUT") {
+        connectionAttempt += 1;
+        clearRetry();
+        closeSocket();
+        setConnectionState("offline");
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        connectionAttempt += 1;
+        clearRetry();
+        closeSocket();
+        void connect();
+      }
+    });
+
     return () => {
       stopped = true;
-      clearTimeout(retryTimer);
-      socket?.close();
+      connectionAttempt += 1;
+      subscription.unsubscribe();
+      clearRetry();
+      closeSocket();
     };
   }, []);
 
