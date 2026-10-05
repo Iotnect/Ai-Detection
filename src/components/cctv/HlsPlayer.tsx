@@ -63,8 +63,6 @@ export default function HlsPlayer({
       const currentGeneration = ++generation;
       clearTimeout(nativeRefreshTimer);
       nativeRefreshTimer = undefined;
-      hls?.destroy();
-      hls = undefined;
 
       if (
         cancelled ||
@@ -73,6 +71,9 @@ export default function HlsPlayer({
       ) {
         return;
       }
+
+      hls?.destroy();
+      hls = undefined;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 
@@ -145,7 +146,7 @@ export default function HlsPlayer({
             if (error.type === Hls.ErrorTypes.NETWORK_ERROR) {
               const statusCode = error.response?.code;
 
-              if (!error.fatal && statusCode !== 401 && statusCode !== 404) {
+              if (!error.fatal && statusCode !== 401) {
                 return;
               }
 
@@ -210,7 +211,22 @@ export default function HlsPlayer({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        stopPlayer();
+        clearTimeout(nativeRetryTimer);
+        nativeRetryTimer = undefined;
+        hls?.stopLoad();
+        video.pause();
+        return;
+      }
+
+      if (hls) {
+        hls.startLoad(-1);
+        resumeAtLiveEdge();
+        void video.play().catch(() => undefined);
+        return;
+      }
+
+      if (video.currentSrc) {
+        void video.play().catch(() => undefined);
         return;
       }
 
