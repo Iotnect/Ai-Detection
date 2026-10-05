@@ -225,13 +225,10 @@ export default function HlsPlayer({
       if (document.visibilityState === "hidden") {
         clearTimeout(nativeRetryTimer);
         nativeRetryTimer = undefined;
-        hls?.stopLoad();
-        video.pause();
         return;
       }
 
       if (hls) {
-        hls.startLoad(-1);
         resumeAtLiveEdge();
         void video.play().catch(() => undefined);
         return;
