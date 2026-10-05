@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { Readable } from "node:stream";
 import { z } from "zod";
 
 import {
@@ -164,7 +165,17 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
         return reply.send(rewriteHlsManifest(await upstream.text(), ticket));
       }
 
-      return reply.send(Buffer.from(await upstream.arrayBuffer()));
+      if (!upstream.body) {
+        return reply.send();
+      }
+
+      const contentLength = upstream.headers.get("content-length");
+      if (contentLength) reply.header("Content-Length", contentLength);
+
+      // Stream media chunks as they arrive. Buffering an entire HLS segment here
+      // adds avoidable latency and makes short network stalls visible as playback
+      // freezes when the dashboard is served through the RunPod HTTPS proxy.
+      return reply.send(Readable.from(upstream.body));
     } catch (error) {
       request.log.error({ error, upstreamUrl: upstreamUrl.toString() }, "HLS proxy failed");
       return reply.code(502).send({ error: "stream_upstream_unavailable" });
