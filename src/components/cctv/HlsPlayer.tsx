@@ -33,6 +33,8 @@ export default function HlsPlayer({
     let hls: Hls | undefined;
     let cancelled = false;
     let generation = 0;
+    let hiddenAt: number | undefined;
+    let ticketExpiresAt = 0;
     let nativeRefreshTimer: ReturnType<typeof setTimeout> | undefined;
     let nativeRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -114,6 +116,9 @@ export default function HlsPlayer({
           scheduleReconnect();
           return;
         }
+
+        ticketExpiresAt =
+          Date.now() + Math.max(30, ticket.expiresIn ?? 300) * 1000;
 
         const playbackUrl = new URL(
           `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
@@ -223,8 +228,26 @@ export default function HlsPlayer({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
         clearTimeout(nativeRetryTimer);
         nativeRetryTimer = undefined;
+        return;
+      }
+
+      const hiddenFor = hiddenAt ? Date.now() - hiddenAt : 0;
+      hiddenAt = undefined;
+
+      // Browsers throttle timers and HLS requests in background tabs. If the
+      // tab was hidden long enough, the player can still exist while every
+      // manifest and segment URL inside it carries an expired stream ticket.
+      // Recreate it with a fresh ticket instead of trying to resume stale HLS
+      // state. Keep very short tab switches instant.
+      const ticketNeedsRefresh =
+        ticketExpiresAt === 0 || Date.now() >= ticketExpiresAt - 30_000;
+      const backgroundPlaybackIsStale = hiddenFor >= 15_000;
+
+      if (ticketNeedsRefresh || backgroundPlaybackIsStale) {
+        void attach();
         return;
       }
 
