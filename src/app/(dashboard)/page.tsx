@@ -303,9 +303,13 @@ export default function DashboardPage() {
                 message: detection.message,
                 time: new Date(detection.timestamp).toLocaleString(),
                 level:
-                  detection.status.toUpperCase() === "NORMAL"
+                  detection.status.toUpperCase() === "DANGER"
+                    ? "danger"
+                    : detection.status.toUpperCase() === "RISING"
+                      ? "warning"
+                      : detection.status.toUpperCase() === "NORMAL"
                     ? "normal"
-                    : "warning",
+                    : "unknown",
               })).map((event) => (
             <div
               key={event.id}
@@ -314,10 +318,12 @@ export default function DashboardPage() {
               <div
                 className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${
                   event.level === "warning"
-                    ? "bg-amber-400"
+                    ? "bg-yellow-300 shadow-[0_0_8px_rgba(253,224,71,0.9)]"
                     : event.level === "danger"
-                    ? "bg-red-500"
-                    : "bg-blue-400"
+                    ? "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
+                    : event.level === "normal"
+                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                    : "bg-slate-400"
                 }`}
               />
               <div className="flex-1 min-w-0">
@@ -327,7 +333,19 @@ export default function DashboardPage() {
                     {event.time}
                   </span>
                 </div>
-                <p className="text-sm text-slate-400 mt-0.5">{event.message}</p>
+                <p
+                  className={`mt-0.5 text-sm font-bold ${
+                    event.level === "danger"
+                      ? "text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.7)]"
+                      : event.level === "warning"
+                        ? "text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.7)]"
+                        : event.level === "normal"
+                          ? "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+                          : "text-slate-300"
+                  }`}
+                >
+                  {event.message}
+                </p>
               </div>
             </div>
             ))
