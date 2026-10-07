@@ -82,7 +82,11 @@ export default function CameraStatusPage() {
                   <tr key={camera.id} className="hover:bg-slate-800/40">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-200">{camera.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{camera.code}</p>
+                      {(camera.location || camera.code !== camera.name) && (
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {camera.location || camera.code}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span
