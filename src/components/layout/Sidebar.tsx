@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Camera,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -27,6 +28,12 @@ const menuItems = [
     name: "Water Level",
     href: "/water-level",
     icon: Waves,
+    roles: ["admin", "client", "public"],
+  },
+  {
+    name: "Camera Status",
+    href: "/camera-status",
+    icon: Camera,
     roles: ["admin", "client", "public"],
   },
   {

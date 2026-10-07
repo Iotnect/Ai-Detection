@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Activity, Maximize2, VideoOff, X } from "lucide-react";
+import { Activity, Camera, ChevronRight, Maximize2, VideoOff, X } from "lucide-react";
 import HlsPlayer from "@/components/cctv/HlsPlayer";
+import { useCameraStatuses } from "@/hooks/useCameraStatuses";
 import { useDetectionStream } from "@/hooks/useDetectionStream";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -19,6 +21,7 @@ const cameraFeeds = [
 export default function DashboardPage() {
   const { user } = useAuth();
   const { detections, connectionState } = useDetectionStream();
+  const { cameras, isLoading: areCameraStatusesLoading } = useCameraStatuses();
   const [selectedCamera, setSelectedCamera] = useState<
     (typeof cameraFeeds)[number] | null
   >(null);
@@ -26,6 +29,9 @@ export default function DashboardPage() {
   const canViewLiveFeed = Boolean(user);
   const selectedHlsUrl = streamMode === "ai" ? aiHlsUrl : liveHlsUrl;
   const handleAiUnavailable = useCallback(() => setStreamMode("original"), []);
+  const onlineCameraCount = cameras.filter(
+    (camera) => camera.status === "online",
+  ).length;
 
   useEffect(() => {
     if (!selectedCamera) return;
@@ -47,11 +53,35 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div>
-        <h1 className="text-xl font-semibold text-white">Dashboard</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
-          Real-time flood monitoring &bull; Sungai Taman Ros Merah
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Real-time flood monitoring &bull; Sungai Taman Ros Merah
+          </p>
+        </div>
+
+        <Link
+          href="/camera-status"
+          className="group flex min-w-52 items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-3 transition hover:border-blue-500/60 hover:bg-slate-800/80"
+          aria-label="Open camera status page"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+            <Camera size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-slate-400">Camera Status</p>
+            <p className="mt-0.5 font-semibold text-white">
+              {areCameraStatusesLoading && !cameras.length
+                ? "Loading..."
+                : `${onlineCameraCount} online / ${cameras.length} total`}
+            </p>
+          </div>
+          <ChevronRight
+            size={17}
+            className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:text-blue-400"
+          />
+        </Link>
       </div>
 
       {/* Single production camera */}
