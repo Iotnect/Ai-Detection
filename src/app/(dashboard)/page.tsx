@@ -313,20 +313,9 @@ export default function DashboardPage() {
               })).map((event) => (
             <div
               key={event.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50"
+              className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3"
             >
-              <div
-                className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${
-                  event.level === "warning"
-                    ? "bg-yellow-300 shadow-[0_0_8px_rgba(253,224,71,0.9)]"
-                    : event.level === "danger"
-                    ? "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
-                    : event.level === "normal"
-                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                    : "bg-slate-400"
-                }`}
-              />
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium text-slate-200">{event.type}</p>
                   <span className="text-xs text-slate-500 whitespace-nowrap">
