@@ -68,6 +68,71 @@ test("DSS authentication and StartVideo use the documented protocol", async () =
         return;
       }
 
+      if (request.url?.endsWith("/tree/devices")) {
+        assert.equal(request.headers["x-subject-token"], "login-token");
+        response.end(
+          JSON.stringify({
+            code: 1000,
+            desc: "Success",
+            data: {
+              devices: [
+                {
+                  code: "1000001",
+                  units: [
+                    {
+                      unitType: "1",
+                      channels: [
+                        {
+                          channelCode: "1000001$1$0$0",
+                          channelName: "MBS-KDN-C1",
+                          channelType: "1",
+                          status: "1",
+                        },
+                      ],
+                    },
+                    {
+                      unitType: "18",
+                      channels: [
+                        {
+                          channelCode: "1000001$18$0$0",
+                          channelName: "Audio_MBS-KDN-C1",
+                          channelType: "1",
+                          status: "1",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+        );
+        return;
+      }
+
+      if (request.url?.endsWith("/device/status/fetch/batch/list")) {
+        assert.equal(request.headers["x-subject-token"], "login-token");
+        assert.deepEqual(body.deviceCodes, ["1000001"]);
+        response.end(
+          JSON.stringify({
+            code: 1000,
+            desc: "Success",
+            data: {
+              results: [
+                {
+                  deviceCode: "1000001",
+                  status: 1,
+                  channels: [
+                    { channelId: "1000001$1$0$0", status: 0 },
+                  ],
+                },
+              ],
+            },
+          }),
+        );
+        return;
+      }
+
       response.statusCode = 404;
       response.end("{}");
     });
@@ -86,9 +151,22 @@ test("DSS authentication and StartVideo use the documented protocol", async () =
       "00:11:22:33:44:55",
     );
     const session = await client.authenticate();
+    const cameras = await client.getVideoCameras(session.token);
+    const statuses = await client.getChannelStatuses(session.token, ["1000001"]);
     const stream = await client.startVideo(session.token, "1000001$1$0$0");
 
     assert.equal(session.token, "login-token");
+    assert.deepEqual(cameras, [
+      {
+        channelId: "1000001$1$0$0",
+        channelName: "MBS-KDN-C1",
+        deviceCode: "1000001",
+        online: true,
+      },
+    ]);
+    assert.deepEqual(statuses, [
+      { channelId: "1000001$1$0$0", online: false },
+    ]);
     assert.equal(stream.rtspUrl, "rtsp://example.test:9100/external?token=56");
   } finally {
     server.close();

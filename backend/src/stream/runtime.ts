@@ -1,4 +1,6 @@
 import { config } from "../config.js";
+import { createCameraInventoryStore } from "../db/camera-inventory-store.js";
+import { DssCameraSynchronizer } from "../dss/camera-sync.js";
 import { DssClient } from "../dss/client.js";
 import { DssSessionManager } from "../dss/session-manager.js";
 import type { AppLogger } from "../logging.js";
@@ -17,7 +19,7 @@ const disabledStatus: StreamStatus = {
 };
 
 export function createStreamRuntime(logger: AppLogger): StreamRuntime {
-  if (!config.dss || !config.mediaMtxPublishUrl) {
+  if (!config.dss) {
     return {
       async start() {
         logger.info({}, "DSS stream automation is disabled");
@@ -41,25 +43,45 @@ export function createStreamRuntime(logger: AppLogger): StreamRuntime {
     config.dss.tokenRefreshIntervalMs,
     logger,
   );
-  const supervisor = new StreamSupervisor(
-    client,
-    sessionManager,
-    config.dss.channelId,
-    config.mediaMtxPublishUrl,
-    config.ffmpegPath,
-    config.streamTranscodeH264,
-    logger,
-  );
+  const supervisor = config.mediaMtxPublishUrl
+    ? new StreamSupervisor(
+        client,
+        sessionManager,
+        config.dss.channelId,
+        config.mediaMtxPublishUrl,
+        config.ffmpegPath,
+        config.streamTranscodeH264,
+        logger,
+      )
+    : undefined;
+  const inventoryStore = createCameraInventoryStore();
+  const cameraSynchronizer = inventoryStore
+    ? new DssCameraSynchronizer(
+        client,
+        sessionManager,
+        inventoryStore,
+        config.dss.channelId,
+        config.dss.cameraDiscoveryIntervalMs,
+        config.dss.cameraStatusIntervalMs,
+        logger,
+      )
+    : undefined;
 
   return {
     async start() {
       await sessionManager.start();
-      supervisor.start();
+      supervisor?.start();
+      cameraSynchronizer?.start();
+
+      if (!cameraSynchronizer) {
+        logger.info({}, "DSS camera inventory sync is disabled");
+      }
     },
     async stop() {
-      await supervisor.stop();
+      await cameraSynchronizer?.stop();
+      await supervisor?.stop();
       await sessionManager.stop();
     },
-    status: () => supervisor.getStatus(),
+    status: () => supervisor?.getStatus() ?? { ...disabledStatus },
   };
 }

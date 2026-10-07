@@ -6,7 +6,8 @@ Single-camera production MVP for `MBS-KDN-C1`.
 
 ```text
 DSS OpenAPI (HTTPS 443)
-  -> Railway backend: login, keepalive, refresh, StartVideo
+  -> Railway backend: login, keepalive, refresh, camera inventory/status sync
+  -> MBS-KDN-C1 only: StartVideo
   -> FFmpeg: temporary DSS RTSP (9100) to stable private RTSP
   -> Railway MediaMTX
        -> protected HLS to Vercel dashboard
@@ -19,12 +20,17 @@ Vast.ai -> POST detections -> Railway backend -> Supabase
 Temporary DSS login tokens, stream tokens, and RTSP URLs exist only in backend
 memory. They must never be saved in Supabase, an environment variable, or logs.
 
+The backend discovers all video channels and synchronizes their online/offline
+state to Supabase. Only `MBS-KDN-C1` opens an active stream; every other camera
+is status-only.
+
 ## 1. Supabase setup
 
 1. Create a Supabase project.
 2. In **Authentication > Providers**, enable Email/Password.
-3. Open **SQL Editor**, create a query, paste the entire contents of
-   `supabase/migrations/202609240001_initial_schema.sql`, and click **Run**.
+3. Open **SQL Editor** and run the files in `supabase/migrations/` in filename
+   order. Existing deployments must also run
+   `202610070001_camera_inventory_sync.sql` before deploying the updated backend.
 4. In **Authentication > Users**, create the first dashboard user and copy its UUID.
 5. Run the following in SQL Editor, replacing the user UUID:
 
@@ -74,6 +80,10 @@ Copy `backend/.env.example` into Railway Variables and replace every blank or
 placeholder. Important rules:
 
 - `DSS_CHANNEL_ID` is the stable channel ID, not an RTSP URL.
+- `DSS_CHANNEL_ID` remains the only channel with an active `StartVideo` relay.
+  Other discovered channels are synchronized for status display only.
+- `DSS_CAMERA_DISCOVERY_INTERVAL_MS` controls inventory refresh and
+  `DSS_CAMERA_STATUS_INTERVAL_MS` controls batch online/offline polling.
 - `MEDIAMTX_PUBLISH_URL` contains the MediaMTX publisher username and a
   URL-encoded password.
 - `MEDIAMTX_PUBLISH_PASSWORD` must contain the original, non-URL-encoded password.

@@ -12,7 +12,8 @@ npm.cmd run dev
 ```
 
 `GET /health` returns the API and stream relay state. DSS automation stays disabled
-unless the complete DSS configuration and `MEDIAMTX_PUBLISH_URL` are present.
+unless the complete DSS configuration is present. The live relay additionally
+requires `MEDIAMTX_PUBLISH_URL`, while camera inventory sync requires Supabase.
 
 ## Detection ingestion
 
@@ -65,6 +66,12 @@ It runs keepalive and token refresh on serialized timers. For each relay start i
 calls `StartVideo`, appends the newly returned stream token to the external RTSP
 URL, and immediately launches FFmpeg. If FFmpeg exits, the service requests a new
 stream token before retrying; an old stream token is never reused.
+
+The same DSS session discovers all video channels and polls their status in
+batches. Stable channel metadata is synchronized to Supabase. `DSS_CHANNEL_ID`
+remains the only channel passed to `StartVideo`; discovery never starts streams
+for status-only cameras. Inventory refresh defaults to 15 minutes and status
+polling defaults to 60 seconds.
 
 Do not log or persist DSS passwords, login tokens, stream tokens, credentials, or
 temporary RTSP URLs.

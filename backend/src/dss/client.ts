@@ -33,6 +33,40 @@ interface StreamData {
   token?: string | number;
 }
 
+interface DeviceTreeChannel {
+  channelCode?: string;
+  channelName?: string;
+  status?: string | number;
+}
+
+interface DeviceTreeUnit {
+  unitType?: string | number;
+  channels?: DeviceTreeChannel[];
+}
+
+interface DeviceTreeDevice {
+  code?: string | number;
+  units?: DeviceTreeUnit[];
+}
+
+interface DeviceTreeData {
+  devices?: DeviceTreeDevice[];
+}
+
+interface DeviceStatusChannel {
+  channelId?: string;
+  status?: string | number;
+}
+
+interface DeviceStatusResult {
+  deviceCode?: string;
+  channels?: DeviceStatusChannel[];
+}
+
+interface DeviceStatusData {
+  results?: DeviceStatusResult[];
+}
+
 export interface DssSession {
   token: string;
   credential?: string;
@@ -41,6 +75,18 @@ export interface DssSession {
 
 export interface DssStreamSource {
   rtspUrl: string;
+}
+
+export interface DssCamera {
+  channelId: string;
+  channelName: string;
+  deviceCode: string;
+  online: boolean;
+}
+
+export interface DssChannelStatus {
+  channelId: string;
+  online: boolean;
 }
 
 const AUTH_PATH = "/brms/api/v1.0/accounts/authorize";
@@ -233,6 +279,97 @@ export class DssClient {
     }
 
     requirePlatformSuccess(response.body, "logout");
+  }
+
+  async getVideoCameras(token: string): Promise<DssCamera[]> {
+    const response = await this.http.request<PlatformResponse<DeviceTreeData>>(
+      "POST",
+      "/brms/api/v1.0/tree/devices",
+      {
+        deviceCodes: [],
+        categories: [],
+        containVirtualDevice: "1",
+        sourceTypes: [],
+        resourceTypes: [],
+        filterAreaAuthority: "",
+      },
+      token,
+    );
+
+    if (response.statusCode === 401) {
+      throw new DssHttpError("DSS session is unauthorized", 401);
+    }
+
+    const devices = requirePlatformSuccess(
+      response.body,
+      "device tree",
+    ).data?.devices ?? [];
+    const cameras = new Map<string, DssCamera>();
+
+    for (const device of devices) {
+      const deviceCode = String(device.code ?? "");
+
+      if (!deviceCode) continue;
+
+      for (const unit of device.units ?? []) {
+        // DSS also reports audio, alarm, and light channels. In the real
+        // device-tree response some of those use channelType "1" as well, so
+        // unitType "1" is the reliable discriminator for video encoders.
+        if (String(unit.unitType ?? "") !== "1") continue;
+
+        for (const channel of unit.channels ?? []) {
+          const channelId = channel.channelCode;
+
+          if (!channelId) continue;
+
+          cameras.set(channelId, {
+            channelId,
+            channelName: channel.channelName?.trim() || channelId,
+            deviceCode,
+            online: String(channel.status ?? "0") === "1",
+          });
+        }
+      }
+    }
+
+    return Array.from(cameras.values());
+  }
+
+  async getChannelStatuses(
+    token: string,
+    deviceCodes: string[],
+  ): Promise<DssChannelStatus[]> {
+    if (deviceCodes.length === 0) return [];
+
+    const response = await this.http.request<PlatformResponse<DeviceStatusData>>(
+      "POST",
+      "/brms/api/v1.1/device/status/fetch/batch/list",
+      { deviceCodes },
+      token,
+    );
+
+    if (response.statusCode === 401) {
+      throw new DssHttpError("DSS session is unauthorized", 401);
+    }
+
+    const results = requirePlatformSuccess(
+      response.body,
+      "channel status",
+    ).data?.results ?? [];
+    const statuses = new Map<string, DssChannelStatus>();
+
+    for (const result of results) {
+      for (const channel of result.channels ?? []) {
+        if (!channel.channelId) continue;
+
+        statuses.set(channel.channelId, {
+          channelId: channel.channelId,
+          online: String(channel.status ?? "0") === "1",
+        });
+      }
+    }
+
+    return Array.from(statuses.values());
   }
 
   async startVideo(token: string, channelId: string): Promise<DssStreamSource> {

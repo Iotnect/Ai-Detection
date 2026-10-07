@@ -34,6 +34,16 @@ const ConfigSchema = z.object({
     .int()
     .positive()
     .default(1_200_000),
+  DSS_CAMERA_DISCOVERY_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(900_000),
+  DSS_CAMERA_STATUS_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60_000),
   MEDIAMTX_PUBLISH_URL: z.string().url().optional(),
   MEDIAMTX_HLS_INTERNAL_URL: z
     .string()
@@ -136,6 +146,8 @@ export const config = {
         tlsRejectUnauthorized: values.DSS_TLS_REJECT_UNAUTHORIZED,
         keepAliveIntervalMs: values.DSS_KEEPALIVE_INTERVAL_MS,
         tokenRefreshIntervalMs: values.DSS_TOKEN_REFRESH_INTERVAL_MS,
+        cameraDiscoveryIntervalMs: values.DSS_CAMERA_DISCOVERY_INTERVAL_MS,
+        cameraStatusIntervalMs: values.DSS_CAMERA_STATUS_INTERVAL_MS,
       }
     : undefined,
   mediaMtxPublishUrl: values.MEDIAMTX_PUBLISH_URL,
