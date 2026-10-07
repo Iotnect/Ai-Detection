@@ -73,16 +73,19 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
-                {process.env.NEXT_PUBLIC_SUPABASE_URL ? "Email" : "Username"}
+                {process.env.NEXT_PUBLIC_SUPABASE_URL
+                  ? "Email or Username"
+                  : "Username"}
               </label>
               <input
                 type="text"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition"
                 placeholder={
                   process.env.NEXT_PUBLIC_SUPABASE_URL
-                    ? "name@company.com"
+                    ? "e.g. mbs or name@company.com"
                     : "e.g. admin"
                 }
                 required
@@ -93,6 +96,7 @@ export default function LoginPage() {
               <label className="block text-sm text-slate-400 mb-1.5">Password</label>
               <input
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition"

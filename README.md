@@ -130,12 +130,18 @@ Import the repository and set:
 ```text
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+NEXT_PUBLIC_USERNAME_EMAIL_DOMAIN=iotnect.com
 NEXT_PUBLIC_API_URL=https://YOUR-BACKEND-DOMAIN
 NEXT_PUBLIC_HLS_URL=https://YOUR-MEDIAMTX-DOMAIN/mbs-kdn-c1/index.m3u8
 ```
 
 Redeploy after changing any `NEXT_PUBLIC_*` variable because Next.js embeds these
 at build time. Add the Vercel URL to `FRONTEND_ORIGINS` on Railway.
+
+The login form accepts either a full email address or a short username. A short
+username such as `mbs` is authenticated internally as
+`mbs@NEXT_PUBLIC_USERNAME_EMAIL_DOMAIN`; full email addresses such as
+`tech@iotnect.com` are used unchanged.
 
 Chrome-family browsers authenticate HLS with the Supabase bearer token. Native
 HLS clients such as iPhone Safari first request a five-minute, camera-scoped

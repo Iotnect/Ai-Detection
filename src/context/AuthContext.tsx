@@ -14,7 +14,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<User | null>;
+  login: (identifier: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -78,8 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<User | null> => {
+  const login = async (identifier: string, password: string): Promise<User | null> => {
     if (supabase) {
+      const normalizedIdentifier = identifier.trim().toLowerCase();
+      const usernameDomain =
+        process.env.NEXT_PUBLIC_USERNAME_EMAIL_DOMAIN?.trim().toLowerCase() ||
+        "iotnect.com";
+      const email = normalizedIdentifier.includes("@")
+        ? normalizedIdentifier
+        : `${normalizedIdentifier}@${usernameDomain}`;
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -108,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const found = DEMO_USERS.find(
       (candidate) =>
-        candidate.username === email && candidate.password === password,
+        candidate.username === identifier && candidate.password === password,
     );
 
     if (!found) return null;
