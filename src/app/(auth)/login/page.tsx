@@ -85,7 +85,7 @@ export default function LoginPage() {
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition"
                 placeholder={
                   process.env.NEXT_PUBLIC_SUPABASE_URL
-                    ? "e.g. mbs or name@company.com"
+                    ? "e.g. name or name@company.com"
                     : "e.g. admin"
                 }
                 required
