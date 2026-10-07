@@ -26,6 +26,19 @@ function cameraMessage(status: CameraConnectionStatus, lastSeenAt: string | null
   return `Last online ${new Date(lastSeenAt).toLocaleString("en-MY")}`;
 }
 
+function cameraLabel(name: string, location: string | null) {
+  const match = name.trim().match(/^(MBS-KDN-C\d+)\s+(.+)$/i);
+
+  if (match) {
+    return {
+      name: match[1].toUpperCase(),
+      location: location || match[2],
+    };
+  }
+
+  return { name, location };
+}
+
 export default function CameraStatusPage() {
   const { cameras, isLoading, error, refresh } = useCameraStatuses();
   const onlineCount = cameras.filter((camera) => camera.status === "online").length;
@@ -78,28 +91,32 @@ export default function CameraStatusPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {cameras.map((camera) => (
-                  <tr key={camera.id} className="hover:bg-slate-800/40">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-200">{camera.name}</p>
-                      {(camera.location || camera.code !== camera.name) && (
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {camera.location || camera.code}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium uppercase ${statusStyle[camera.status]}`}
-                      >
-                        {camera.status}
-                      </span>
-                    </td>
-                    <td className="min-w-72 px-4 py-3 text-slate-400">
-                      {cameraMessage(camera.status, camera.last_seen_at)}
-                    </td>
-                  </tr>
-                ))}
+                {cameras.map((camera) => {
+                  const label = cameraLabel(camera.name, camera.location);
+
+                  return (
+                    <tr key={camera.id} className="hover:bg-slate-800/40">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-slate-200">{label.name}</p>
+                        {label.location && (
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {label.location}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium uppercase ${statusStyle[camera.status]}`}
+                        >
+                          {camera.status}
+                        </span>
+                      </td>
+                      <td className="min-w-72 px-4 py-3 text-slate-400">
+                        {cameraMessage(camera.status, camera.last_seen_at)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
