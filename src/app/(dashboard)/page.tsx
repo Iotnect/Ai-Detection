@@ -317,7 +317,9 @@ export default function DashboardPage() {
             >
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-slate-200">{event.type}</p>
+                  <p className="text-sm font-medium text-slate-200">
+                    {event.type === "WATER_LEVEL" ? "STATUS" : event.type}
+                  </p>
                   <span className="text-xs text-slate-500 whitespace-nowrap">
                     {event.time}
                   </span>
