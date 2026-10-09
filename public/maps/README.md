@@ -14,10 +14,14 @@ MBS Camera location.xlsx rows 61–67, verified against the matching WGS84 point
 shapefile MBS_Camera_Location_SHP.zip. Other cameras from the 64-point source
 are deliberately excluded. No viewing directions were supplied.
 
-Markers match live inventory records by camera code, and reuse the Dashboard's
-30-second status refresh. Missing records or failed fetches show unavailable
-status rather than assuming offline. Click a marker or a C1–C7 button to open
-individual connectivity details. The initial view fits the seven Nilai cameras;
+Markers prefer exact inventory camera codes, then match the MBS-KDN identifier
+at the start of DSS camera names (discovered records have generated database
+codes). Ambiguous name matches are not selected. Markers and individual details
+use the same resolver and the Dashboard's 30-second status refresh. Missing
+records or failed fetches show unavailable status rather than assuming offline.
+Click a map marker to open its name, location, status, and connectivity message
+in a card on the map. There is no separate connectivity table or camera list.
+The initial view fits the seven Nilai cameras;
 All Nilai shows the full Nilai coverage.
 
 The OpenStreetMap credit appears after the map is ready and collapses to an

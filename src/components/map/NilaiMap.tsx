@@ -6,12 +6,20 @@ import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from "
 import type { Map as LeafletMap, Marker } from "leaflet";
 import type { CameraStatusRecord } from "@/hooks/useCameraStatuses";
 import { cameraLocations, type MapCameraCode } from "@/lib/camera-locations";
+import { cameraConnectivityMessage, findMapCameraStatus } from "@/lib/map-camera-status";
 import MapAttribution from "./MapAttribution";
 import "leaflet/dist/leaflet.css";
 import styles from "./NilaiMap.module.css";
 
 type RoadProperties = { highway: string; name: string; ref: string };
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const statusStyles = {
+  online: "bg-emerald-500/10 text-emerald-400",
+  offline: "bg-slate-500/10 text-slate-400",
+  reconnecting: "bg-amber-500/10 text-amber-400",
+  error: "bg-red-500/10 text-red-400",
+  unknown: "bg-slate-500/10 text-slate-400",
+};
 
 interface Props {
   cameras: CameraStatusRecord[];
@@ -21,7 +29,6 @@ interface Props {
 
 export default function NilaiMap({ cameras, statusesLoading, statusesError }: Props) {
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
   const resetView = useRef<(() => void) | null>(null);
   const cameraView = useRef<(() => void) | null>(null);
   const markers = useRef(new Map<MapCameraCode, Marker>());
@@ -30,23 +37,35 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
   const [point, setPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedCode, setSelectedCode] = useState<MapCameraCode | null>(null);
   const selectedLocation = cameraLocations.find((camera) => camera.code === selectedCode);
-  const selectedStatus = cameras.find((camera) => camera.code.trim().toUpperCase() === selectedCode);
+  const selectedStatus = selectedCode ? findMapCameraStatus(cameras, selectedCode) : undefined;
+  const selectedStatusStyle = statusStyles[!statusesError && selectedStatus ? selectedStatus.status : "unknown"];
   const statusLabel = (camera?: CameraStatusRecord) => statusesError
     ? "Status unavailable"
     : statusesLoading && !camera ? "Loading status..." : camera?.status || "Not in camera inventory";
 
-  function selectCamera(code: MapCameraCode) {
-    setSelectedCode(code);
-    const location = cameraLocations.find((camera) => camera.code === code)!;
-    mapRef.current?.setView([location.latitude, location.longitude], Math.max(16, mapRef.current.getZoom()));
+  function closeCamera() {
+    if (selectedCode) markers.current.get(selectedCode)?.getElement()?.focus();
+    setSelectedCode(null);
   }
+
+  useEffect(() => {
+    if (!selectedCode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        markers.current.get(selectedCode)?.getElement()?.focus();
+        setSelectedCode(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedCode]);
 
   // Update marker appearance without recreating the map or interrupting pan/zoom.
   useEffect(() => {
     for (const location of cameraLocations) {
       const marker = markers.current.get(location.code);
       const element = marker?.getElement();
-      const camera = cameras.find((record) => record.code.trim().toUpperCase() === location.code);
+      const camera = findMapCameraStatus(cameras, location.code);
       if (!element) continue;
       element.dataset.status = statusesError ? "unknown" : camera?.status || "unknown";
       element.dataset.selected = String(location.code === selectedCode);
@@ -81,7 +100,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         preferCanvas: true, minZoom: 10, maxZoom: 19,
         scrollWheelZoom: false, zoomSnap: 0.25, attributionControl: false,
       });
-      mapRef.current = map;
 
       const boundaryLayer = L.geoJSON(boundary, {
         interactive: false,
@@ -160,7 +178,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
       controller.abort();
       observer?.disconnect();
       map?.remove();
-      mapRef.current = null;
       resetView.current = null;
       cameraView.current = null;
       markers.current.clear();
@@ -187,6 +204,21 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
       <div className={`relative ${styles.frame}`}>
         <div ref={container} className={styles.map} role="region" aria-label="Interactive Nilai road map with seven camera buttons. Use plus and minus to zoom, arrow keys to pan, and Enter to select a focused camera." />
         {state === "ready" && <MapAttribution />}
+        {selectedLocation && (
+          <div className="absolute right-3 top-3 z-[550] max-h-[calc(100%-5rem)] w-80 max-w-[calc(100%-4.5rem)] overflow-y-auto rounded-xl border border-slate-600 bg-slate-950 p-4 shadow-2xl" role="region" aria-label={`${selectedLocation.code} camera status`} aria-live="polite">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 font-semibold text-white"><Camera size={17} className="text-sky-400" /> {selectedLocation.code}</h3>
+                <p className="mt-1 text-sm text-slate-300">{selectedLocation.location}</p>
+              </div>
+              <button type="button" onClick={closeCamera} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800" aria-label="Close camera status"><X size={17} /></button>
+            </div>
+            <p className="mt-3 text-sm text-slate-200">Connectivity: <strong className={`rounded-full px-2 py-1 text-xs uppercase ${selectedStatusStyle}`}>{statusLabel(selectedStatus)}</strong></p>
+            {statusesError ? <p className="mt-1 text-xs text-amber-400">The latest connectivity check failed. Use Refresh to try again.</p> : selectedStatus ? <p className="mt-2 text-xs leading-5 text-slate-300">{cameraConnectivityMessage(selectedStatus)}</p> : <p className="mt-2 text-xs text-slate-400">{statusesLoading ? "Checking camera connectivity..." : "No matching connectivity record found."}</p>}
+            <p className="mt-2 font-mono text-xs text-slate-400">{selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}</p>
+            <p className="mt-2 text-xs text-slate-500">Connectivity updates every 30 seconds.</p>
+          </div>
+        )}
         {state !== "ready" && (
           <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center gap-3 bg-slate-950 text-sm text-slate-400" role="status">
             {state === "loading" ? "Loading Nilai roads..." : "Unable to load the road map."}
@@ -200,24 +232,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
           <div>Red error · grey offline / unavailable</div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 border-t border-slate-800 px-4 py-3" aria-label="Select camera">
-        {cameraLocations.map((camera) => <button key={camera.code} type="button" disabled={state !== "ready"} onClick={() => selectCamera(camera.code)} aria-pressed={selectedCode === camera.code} title={camera.location} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs disabled:opacity-40 ${selectedCode === camera.code ? "border-sky-400 bg-sky-500/10 text-sky-400" : "border-slate-700 text-slate-300 hover:bg-slate-800"}`}><Camera size={14} /> {camera.code.replace("MBS-KDN-", "")}</button>)}
-      </div>
-      {selectedLocation && (
-        <div className="border-t border-slate-800 bg-slate-950/60 px-4 py-4" role="region" aria-label={`${selectedLocation.code} camera status`} aria-live="polite">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-white"><Camera size={17} className="text-sky-400" /> {selectedLocation.code}</h3>
-              <p className="mt-1 text-sm text-slate-300">{selectedLocation.location}</p>
-            </div>
-            <button type="button" onClick={() => setSelectedCode(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800" aria-label="Close camera status"><X size={17} /></button>
-          </div>
-          <p className="mt-3 text-sm text-slate-200">Connectivity: <strong className="capitalize">{statusLabel(selectedStatus)}</strong></p>
-          {statusesError ? <p className="mt-1 text-xs text-amber-400">The latest connectivity check failed. Use Refresh to try again.</p> : selectedStatus?.last_seen_at ? <p className="mt-1 text-xs text-slate-400">Last seen online: {new Date(selectedStatus.last_seen_at).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })} (MYT)</p> : <p className="mt-1 text-xs text-slate-400">No online activity recorded yet.</p>}
-          <p className="mt-2 font-mono text-xs text-slate-400">{selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}</p>
-          <p className="mt-2 text-xs text-slate-500">Connectivity updates every 30 seconds.</p>
-        </div>
-      )}
       <div className="flex flex-wrap justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-400">
         <p>Drag to pan · Use + / − to zoom · Click to inspect a location</p>
         <output aria-live="polite" className="font-mono text-sky-400">{point ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : "Latitude, longitude"}</output>
