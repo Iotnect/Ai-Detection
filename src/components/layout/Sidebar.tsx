@@ -21,20 +21,20 @@ import { useAuth } from "@/context/AuthContext";
 const menuItems = [
   {
     name: "Dashboard",
-    href: "/",
+    href: "/camera-status",
     icon: LayoutDashboard,
+    roles: ["admin", "client", "public"],
+  },
+  {
+    name: "AI Detection",
+    href: "/",
+    icon: Camera,
     roles: ["admin", "client", "public"],
   },
   {
     name: "Water Level",
     href: "/water-level",
     icon: Waves,
-    roles: ["admin", "client", "public"],
-  },
-  {
-    name: "Camera Status",
-    href: "/camera-status",
-    icon: Camera,
     roles: ["admin", "client", "public"],
   },
   {

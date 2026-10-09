@@ -47,7 +47,7 @@ export default function CameraStatusPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Camera Status</h1>
+          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
           <p className="mt-0.5 text-sm text-slate-400">
             DSS camera connectivity for MBS
           </p>

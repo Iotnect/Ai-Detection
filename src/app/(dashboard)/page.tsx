@@ -55,7 +55,7 @@ export default function DashboardPage() {
       {/* Page Title */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
+          <h1 className="text-xl font-semibold text-white">AI Detection</h1>
           <p className="text-sm text-slate-400 mt-0.5">
             Real-time flood monitoring &bull; Sungai Taman Ros Merah
           </p>
