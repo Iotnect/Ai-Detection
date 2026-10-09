@@ -3,10 +3,34 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Detection, StoredDetection } from "../domain/detection.js";
 import { getSupabaseAdmin } from "./supabase.js";
 
+export interface DetectionHistoryOptions {
+  limit: number;
+  from?: string;
+  to?: string;
+  statuses?: string[];
+}
+
+interface DetectionHistoryRow {
+  client_id: string;
+  event_type: string;
+  raw_y: number;
+  smoothed_y: number;
+  status: string;
+  confidence: number | null;
+  message: string;
+  image_path: string | null;
+  occurred_at: string;
+  received_at: string;
+  cameras: unknown;
+}
+
 export interface DetectionStore {
   save(detection: Detection): Promise<StoredDetection>;
   latest(clientId?: string): Promise<StoredDetection[]>;
-  history(clientId: string | undefined, limit: number): Promise<StoredDetection[]>;
+  history(
+    clientId: string | undefined,
+    options: DetectionHistoryOptions,
+  ): Promise<StoredDetection[]>;
 }
 
 class MemoryDetectionStore implements DetectionStore {
@@ -36,10 +60,24 @@ class MemoryDetectionStore implements DetectionStore {
     return Array.from(latestByCamera.values());
   }
 
-  async history(clientId: string | undefined, limit: number): Promise<StoredDetection[]> {
+  async history(
+    clientId: string | undefined,
+    options: DetectionHistoryOptions,
+  ): Promise<StoredDetection[]> {
     return this.detections
-      .filter((detection) => !clientId || detection.client_id === clientId)
-      .slice(0, limit);
+      .filter((detection) => {
+        if (clientId && detection.client_id !== clientId) return false;
+        if (options.from && detection.timestamp < options.from) return false;
+        if (options.to && detection.timestamp > options.to) return false;
+        if (
+          options.statuses?.length &&
+          !options.statuses.includes(detection.status.toUpperCase())
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, options.limit);
   }
 }
 
@@ -49,7 +87,7 @@ class SupabaseDetectionStore implements DetectionStore {
   async save(detection: Detection): Promise<StoredDetection> {
     const { data: camera, error: cameraError } = await this.client
       .from("cameras")
-      .select("id, client_id")
+      .select("id, client_id, location")
       .eq("code", detection.camera_id)
       .single();
 
@@ -86,12 +124,13 @@ class SupabaseDetectionStore implements DetectionStore {
     return {
       ...detection,
       client_id: camera.client_id,
+      camera_location: camera.location,
       received_at: event.received_at,
     };
   }
 
   async latest(clientId?: string): Promise<StoredDetection[]> {
-    const history = await this.history(clientId, 100);
+    const history = await this.history(clientId, { limit: 100 });
     const latestByCamera = new Map<string, StoredDetection>();
 
     for (const detection of history) {
@@ -103,31 +142,49 @@ class SupabaseDetectionStore implements DetectionStore {
     return Array.from(latestByCamera.values());
   }
 
-  async history(clientId: string | undefined, limit: number): Promise<StoredDetection[]> {
-    let query = this.client
-      .from("events")
-      .select(
-        "client_id, event_type, raw_y, smoothed_y, status, confidence, message, image_path, occurred_at, received_at, cameras!inner(code)",
-      )
-      .order("occurred_at", { ascending: false })
-      .limit(limit);
+  async history(
+    clientId: string | undefined,
+    options: DetectionHistoryOptions,
+  ): Promise<StoredDetection[]> {
+    const rows: DetectionHistoryRow[] = [];
+    const pageSize = 1_000;
 
-    if (clientId) {
-      query = query.eq("client_id", clientId);
+    while (rows.length < options.limit) {
+      const batchSize = Math.min(pageSize, options.limit - rows.length);
+      let query = this.client
+        .from("events")
+        .select(
+          "client_id, event_type, raw_y, smoothed_y, status, confidence, message, image_path, occurred_at, received_at, cameras!inner(code, location)",
+        )
+        .order("occurred_at", { ascending: false })
+        .range(rows.length, rows.length + batchSize - 1);
+
+      if (clientId) query = query.eq("client_id", clientId);
+      if (options.from) query = query.gte("occurred_at", options.from);
+      if (options.to) query = query.lte("occurred_at", options.to);
+      if (options.statuses?.length) query = query.in("status", options.statuses);
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw new Error("Unable to read detections from Supabase", {
+          cause: error,
+        });
+      }
+
+      const batch = (data ?? []) as unknown as DetectionHistoryRow[];
+      rows.push(...batch);
+      if (batch.length < batchSize) break;
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error("Unable to read detections from Supabase", {
-        cause: error,
-      });
-    }
-
-    return (data ?? []).flatMap((row) => {
+    return rows.flatMap((row) => {
       const cameraValue = row.cameras as unknown;
       const camera = Array.isArray(cameraValue) ? cameraValue[0] : cameraValue;
-      const cameraCode = (camera as { code?: string } | null)?.code;
+      const cameraRecord = camera as {
+        code?: string;
+        location?: string | null;
+      } | null;
+      const cameraCode = cameraRecord?.code;
 
       if (!cameraCode) {
         return [];
@@ -145,6 +202,7 @@ class SupabaseDetectionStore implements DetectionStore {
         image_url: row.image_path,
         received_at: row.received_at,
         client_id: row.client_id,
+        camera_location: cameraRecord?.location ?? null,
       } satisfies StoredDetection];
     });
   }

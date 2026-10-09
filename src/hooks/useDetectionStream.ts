@@ -16,6 +16,7 @@ export interface LiveDetection {
   message: string;
   image_url?: string | null;
   received_at: string;
+  camera_location?: string | null;
 }
 
 type ConnectionState = "disabled" | "connecting" | "online" | "offline";

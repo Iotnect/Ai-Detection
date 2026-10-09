@@ -21,4 +21,5 @@ export type Detection = z.infer<typeof DetectionSchema>;
 export type StoredDetection = Detection & {
   received_at: string;
   client_id?: string;
+  camera_location?: string | null;
 };

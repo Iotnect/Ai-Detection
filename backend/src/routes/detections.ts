@@ -17,8 +17,16 @@ const dashboardClients = new Map<WebSocket, string | undefined>();
 const liveDetections = new Map<string, StoredDetection>();
 const lastPersistedAt = new Map<string, number>();
 const DetectionHistoryQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(1_000).default(500),
+  limit: z.coerce.number().int().min(1).max(10_000).default(500),
+  from: z.string().refine((value) => !Number.isNaN(Date.parse(value))).optional(),
+  to: z.string().refine((value) => !Number.isNaN(Date.parse(value))).optional(),
+  statuses: z.string().max(329).optional(),
 });
+
+const HistoryStatusesSchema = z
+  .array(z.string().trim().min(1).max(32).regex(/^[A-Za-z0-9_-]+$/))
+  .max(10)
+  .optional();
 
 function secretsMatch(candidate: string, expected: string): boolean {
   const candidateBuffer = Buffer.from(candidate);
@@ -167,11 +175,29 @@ export async function detectionRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: "invalid_history_query" });
       }
 
+      const statuses = query.data.statuses
+        ? query.data.statuses.split(",").map((status) => status.trim().toUpperCase())
+        : undefined;
+      const parsedStatuses = HistoryStatusesSchema.safeParse(statuses);
+      const invalidRange =
+        query.data.from &&
+        query.data.to &&
+        new Date(query.data.from).getTime() > new Date(query.data.to).getTime();
+
+      if (!parsedStatuses.success || invalidRange) {
+        return reply.code(400).send({ error: "invalid_history_query" });
+      }
+
       try {
         return {
           data: await detectionStore.history(
             getRequestClientId(request),
-            query.data.limit,
+            {
+              limit: query.data.limit,
+              from: query.data.from,
+              to: query.data.to,
+              statuses: parsedStatuses.data,
+            },
           ),
         };
       } catch (error) {
