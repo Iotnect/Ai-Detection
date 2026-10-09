@@ -79,6 +79,7 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
     const controller = new AbortController();
     let disposed = false;
     let observer: ResizeObserver | undefined;
+    let themeObserver: MutationObserver | undefined;
     let map: LeafletMap | undefined;
     setState("loading");
 
@@ -100,9 +101,22 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         scrollWheelZoom: false, zoomSnap: 0.25, attributionControl: false,
       });
 
+      // Canvas paths need an explicit redraw when the dashboard's CSS theme changes.
+      const readPalette = () => {
+        const css = getComputedStyle(container.current!);
+        const color = (name: string) => css.getPropertyValue(`--map-${name}`).trim();
+        return {
+          border: color("border"), land: color("land"), highway: color("highway"),
+          main: color("main-road"), tertiary: color("tertiary-road"), local: color("local-road"),
+        };
+      };
+      let palette = readPalette();
+      const boundaryStyle = () => ({
+        color: palette.border, weight: 2, dashArray: "6 6", fillColor: palette.land, fillOpacity: 0.55,
+      });
       const boundaryLayer = L.geoJSON(boundary, {
         interactive: false,
-        style: { color: "#fb7185", weight: 2, dashArray: "6 6", fillColor: "#12243a", fillOpacity: 0.55 },
+        style: boundaryStyle,
       }).addTo(map);
 
       const roadStyle = (feature?: Feature<Geometry, RoadProperties>) => {
@@ -112,7 +126,7 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         const main = /^(primary|secondary)/.test(road);
         const tertiary = road.startsWith("tertiary");
         return {
-          color: major ? "#e8bb76" : main ? "#9ebbd4" : tertiary ? "#6f91ae" : "#425e79",
+          color: major ? palette.highway : main ? palette.main : tertiary ? palette.tertiary : palette.local,
           weight: major ? 2.8 : main ? 1.8 : tertiary ? 1.2 : zoom >= 15 ? 1.1 : 0.65,
           opacity: road === "service" && zoom < 15 ? 0 : 0.95,
         };
@@ -128,6 +142,12 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
           }
         },
       }).addTo(map);
+      themeObserver = new MutationObserver(() => {
+        palette = readPalette();
+        boundaryLayer.setStyle(boundaryStyle);
+        roadLayer.setStyle(roadStyle);
+      });
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
       const bounds = boundaryLayer.getBounds();
       map.setMaxBounds(bounds.pad(0.35));
       const fit = () => map?.fitBounds(bounds, { padding: [28, 28] });
@@ -167,6 +187,7 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
       disposed = true;
       controller.abort();
       observer?.disconnect();
+      themeObserver?.disconnect();
       map?.remove();
       resetView.current = null;
       cameraView.current = null;
@@ -215,8 +236,8 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
           </div>
         )}
         <div className="pointer-events-none absolute bottom-7 left-3 z-[500] rounded-lg border border-slate-700 bg-slate-950/95 px-3 py-2 text-[11px] text-slate-300">
-          <div className="flex items-center gap-2"><span className="w-5 border-t-2 border-amber-200" /> Highways & major roads</div>
-          <div className="mt-1 flex items-center gap-2"><span className="w-5 border-t-2 border-dashed border-rose-400" /> Border</div>
+          <div className="flex items-center gap-2"><span className={`w-5 border-t-2 ${styles.highwayKey}`} /> Highways & major roads</div>
+          <div className="mt-1 flex items-center gap-2"><span className={`w-5 border-t-2 border-dashed ${styles.borderKey}`} /> Border</div>
           <div className="mt-1">Cameras: green online · amber reconnecting</div>
           <div>Red error · grey offline / unavailable</div>
         </div>
