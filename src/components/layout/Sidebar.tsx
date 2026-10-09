@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Camera,
+  FileText,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -40,6 +41,12 @@ const menuItems = [
     name: "Display Log",
     href: "/display-log",
     icon: ListChecks,
+    roles: ["admin", "client", "public"],
+  },
+  {
+    name: "Reporting",
+    href: "/reporting",
+    icon: FileText,
     roles: ["admin", "client", "public"],
   },
 ];
