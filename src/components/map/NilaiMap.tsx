@@ -34,7 +34,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
   const markers = useRef(new Map<MapCameraCode, Marker>());
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [point, setPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedCode, setSelectedCode] = useState<MapCameraCode | null>(null);
   const selectedLocation = cameraLocations.find((camera) => camera.code === selectedCode);
   const selectedStatus = selectedCode ? findMapCameraStatus(cameras, selectedCode) : undefined;
@@ -157,15 +156,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         markers.current.set(camera.code, marker);
       }
       map.on("zoomend", () => roadLayer.setStyle(roadStyle));
-      let inspection: ReturnType<typeof L.circleMarker> | undefined;
-      map.on("click", (event) => {
-        setPoint({ lat: event.latlng.lat, lng: event.latlng.lng });
-        inspection?.remove();
-        inspection = L.circleMarker(event.latlng, {
-          radius: 5, color: "#e0f2fe", weight: 2, fillColor: "#38bdf8", fillOpacity: 1,
-          interactive: false,
-        }).addTo(map!);
-      });
       observer = new ResizeObserver(() => map?.invalidateSize());
       observer.observe(container.current);
       setState("ready");
@@ -226,14 +216,13 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         )}
         <div className="pointer-events-none absolute bottom-7 left-3 z-[500] rounded-lg border border-slate-700 bg-slate-950/95 px-3 py-2 text-[11px] text-slate-300">
           <div className="flex items-center gap-2"><span className="w-5 border-t-2 border-amber-200" /> Highways & major roads</div>
-          <div className="mt-1 flex items-center gap-2"><span className="w-5 border-t-2 border-dashed border-rose-400" /> Draft coverage</div>
+          <div className="mt-1 flex items-center gap-2"><span className="w-5 border-t-2 border-dashed border-rose-400" /> Border</div>
           <div className="mt-1">Cameras: green online · amber reconnecting</div>
           <div>Red error · grey offline / unavailable</div>
         </div>
       </div>
       <div className="flex flex-wrap justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-400">
-        <p>Drag to pan · Use + / − to zoom · Click to inspect a location</p>
-        <output aria-live="polite" className="font-mono text-sky-400">{point ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : "Latitude, longitude"}</output>
+        <p>Drag to pan · Use + / − to zoom · Click a camera to view its status</p>
         <p className="w-full text-slate-500">Client-supplied camera coordinates. The outline shows draft Nilai coverage, not an official administrative boundary.</p>
       </div>
     </section>

@@ -32,7 +32,8 @@ attribution.
 
 The dashboard serves both GeoJSON files locally; it needs no runtime mapping
 API key or third-party tile requests. Hover roads to see available OSM names.
-Click the map to inspect latitude, longitude. This inspection dot is not a camera.
+Click a camera marker to see its coordinates and connectivity details. Clicking
+the map background does not add a marker. The coverage outline is labelled Border.
 
 To replace the boundary, provide a verified GeoJSON Feature with Polygon
 geometry (coordinates in longitude, latitude order), then regenerate the roads:
