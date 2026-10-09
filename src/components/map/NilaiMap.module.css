@@ -1,59 +1,26 @@
-.frame {
-  height: clamp(420px, 65vh, 680px);
-  isolation: isolate;
+.canvas {
+  overflow-x: auto;
+  background: #0b1422;
 }
 
-.map {
+.diagram {
+  display: block;
   width: 100%;
-  height: 100%;
-  background: #090f1b;
-  font-family: inherit;
+  min-width: 800px;
+  max-height: 650px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-.map :global(.leaflet-control-zoom a) {
-  background: #142135;
-  color: #e2e8f0;
-  border-color: #334155;
-}
-
-.map :global(.leaflet-control-zoom a:hover) {
-  background: #24364d;
-}
-
-.map :global(.leaflet-control-attribution) {
-  background: #0b1220eb;
-  color: #94a3b8;
-  font-size: 10px;
-}
-
-.map :global(.leaflet-control-attribution a) {
-  color: #7dd3fc;
-}
-
-.map :global(.leaflet-tooltip) {
-  background: #142135;
-  border-color: #475569;
-  color: #e2e8f0;
-}
-
-.cameraMarker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  border: 2px solid #94a3b8;
-  border-radius: 12px 12px 12px 2px;
-  background: #172437;
-  color: #e2e8f0;
-  box-shadow: 0 3px 10px #0009;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.cameraMarker[data-status="online"] { border-color: #34d399; color: #6ee7b7; }
-.cameraMarker[data-status="reconnecting"] { border-color: #fbbf24; color: #fcd34d; }
-.cameraMarker[data-status="error"] { border-color: #f87171; color: #fca5a5; }
-.cameraMarker[data-selected="true"],
-.cameraMarker:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
+.camera { --status: #94a3b8; cursor: pointer; outline: none; }
+.camera[data-status="online"] { --status: #34d399; }
+.camera[data-status="reconnecting"] { --status: #fbbf24; }
+.camera[data-status="error"] { --status: #f87171; }
+.point { fill: var(--status); }
+.halo { fill: var(--status); opacity: 0.12; }
+.leader { fill: none; stroke: #475569; stroke-width: 1.2; stroke-dasharray: 4 4; }
+.label { fill: #142135; stroke: #334155; stroke-width: 1.2; }
+.camera:hover .label { fill: #1b2e47; stroke: #7dd3fc; }
+.camera:focus-visible .label,
+.camera[data-selected="true"] .label { stroke: #38bdf8; stroke-width: 3; }
+.camera:focus-visible .leader,
+.camera[data-selected="true"] .leader { stroke: #38bdf8; stroke-dasharray: none; }
