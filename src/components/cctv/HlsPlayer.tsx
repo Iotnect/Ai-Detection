@@ -4,6 +4,7 @@ import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
 
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { holdVideoFrame } from "@/lib/hold-video-frame";
 
 interface HlsPlayerProps {
   src: string;
@@ -23,12 +24,17 @@ export default function HlsPlayer({
   onUnavailable,
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frameRef = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
+  const [holdingFrame, setHoldingFrame] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
+    const canvas = frameRef.current;
 
-    if (!video) return;
+    if (!video || !canvas) return;
+    setFailed(false);
+    const retainedFrame = holdVideoFrame(video, canvas, setHoldingFrame);
 
     let hls: Hls | undefined;
     let cancelled = false;
@@ -39,6 +45,8 @@ export default function HlsPlayer({
     let nativeRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const markUnavailable = () => {
+      if (cancelled) return;
+      retainedFrame.freeze();
       setFailed(true);
       onUnavailable?.();
     };
@@ -49,6 +57,7 @@ export default function HlsPlayer({
       nativeRefreshTimer = undefined;
       clearTimeout(nativeRetryTimer);
       nativeRetryTimer = undefined;
+      retainedFrame.freeze();
       hls?.destroy();
       hls = undefined;
       video.pause();
@@ -76,6 +85,7 @@ export default function HlsPlayer({
         return;
       }
 
+      retainedFrame.freeze();
       hls?.destroy();
       hls = undefined;
 
@@ -106,12 +116,9 @@ export default function HlsPlayer({
           expiresIn?: number;
         };
 
-        if (
-          !response.ok ||
-          !ticket.token ||
-          cancelled ||
-          currentGeneration !== generation
-        ) {
+        if (cancelled || currentGeneration !== generation) return;
+
+        if (!response.ok || !ticket.token) {
           markUnavailable();
           scheduleReconnect();
           return;
@@ -177,6 +184,7 @@ export default function HlsPlayer({
             if (!error.fatal) return;
 
             if (error.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              retainedFrame.freeze();
               player.recoverMediaError();
               return;
             }
@@ -197,6 +205,7 @@ export default function HlsPlayer({
 
         markUnavailable();
       } catch {
+        if (cancelled || currentGeneration !== generation) return;
         markUnavailable();
         scheduleReconnect();
       }
@@ -274,6 +283,7 @@ export default function HlsPlayer({
 
     return () => {
       cancelled = true;
+      retainedFrame.dispose();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("play", resumeAtLiveEdge);
       video.removeEventListener("playing", handlePlaying);
@@ -295,7 +305,18 @@ export default function HlsPlayer({
         muted
         playsInline
       />
-      {failed && (
+      <canvas
+        ref={frameRef}
+        aria-hidden="true"
+        className={`${className || "h-full w-full object-contain"} pointer-events-none absolute inset-0 bg-black`}
+        style={{ visibility: holdingFrame ? "visible" : "hidden" }}
+      />
+      {holdingFrame && (
+        <div className="pointer-events-none absolute bottom-3 right-3 rounded bg-black/75 px-2 py-1 text-[11px] text-slate-200" role="status">
+          {failed ? "Reconnecting" : "Buffering"} &middot; Showing last frame
+        </div>
+      )}
+      {failed && !holdingFrame && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/95 px-6 text-center text-sm text-slate-400">
           Live stream is temporarily unavailable. The player will reconnect after the relay recovers.
         </div>
