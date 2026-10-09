@@ -194,7 +194,6 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
           <p className="mt-1 text-xs text-slate-400">7 MBS-KDN cameras · Select a camera to view its connectivity</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-400">Draft coverage</span>
           <button type="button" disabled={state !== "ready"} onClick={() => cameraView.current?.()} className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"><Camera size={14} /> Seven cameras</button>
           <button type="button" disabled={state !== "ready"} onClick={() => resetView.current?.()} className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40">
             <LocateFixed size={14} /> All Nilai
