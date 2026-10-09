@@ -33,8 +33,8 @@ export default function LoginPage() {
         <div className="max-w-md text-center space-y-6">
           <div className="flex justify-center">
             <Image
-              src={`${basePath}/neovision.png`}
-              alt="NV Logo"
+              src={`${basePath}/Majlis_Bandaraya_Seremban.svg`}
+              alt="Majlis Bandaraya Seremban logo"
               width={300}
               height={300}
               className="object-contain"
@@ -54,8 +54,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden flex justify-center mb-4">
             <Image
-              src={`${basePath}/neovision.png`}
-              alt="NeoVision Logo"
+              src={`${basePath}/Majlis_Bandaraya_Seremban.svg`}
+              alt="Majlis Bandaraya Seremban logo"
               width={112}
               height={112}
               className="object-contain"
