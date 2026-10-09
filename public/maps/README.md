@@ -20,6 +20,12 @@ status rather than assuming offline. Click a marker or a C1–C7 button to open
 individual connectivity details. The initial view fits the seven Nilai cameras;
 All Nilai shows the full Nilai coverage.
 
+The OpenStreetMap credit appears after the map is ready and collapses to an
+information button after five seconds. It stays open while hovered or focused.
+The button reopens the credit and ODbL licence links, and manual reopening does
+not start another countdown. No map interaction is needed to see the initial
+attribution.
+
 The dashboard serves both GeoJSON files locally; it needs no runtime mapping
 API key or third-party tile requests. Hover roads to see available OSM names.
 Click the map to inspect latitude, longitude. This inspection dot is not a camera.

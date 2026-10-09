@@ -6,6 +6,7 @@ import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from "
 import type { Map as LeafletMap, Marker } from "leaflet";
 import type { CameraStatusRecord } from "@/hooks/useCameraStatuses";
 import { cameraLocations, type MapCameraCode } from "@/lib/camera-locations";
+import MapAttribution from "./MapAttribution";
 import "leaflet/dist/leaflet.css";
 import styles from "./NilaiMap.module.css";
 
@@ -78,11 +79,9 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
 
       map = L.map(container.current, {
         preferCanvas: true, minZoom: 10, maxZoom: 19,
-        scrollWheelZoom: false, zoomSnap: 0.25,
+        scrollWheelZoom: false, zoomSnap: 0.25, attributionControl: false,
       });
       mapRef.current = map;
-      map.attributionControl.setPrefix(false);
-      map.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>');
 
       const boundaryLayer = L.geoJSON(boundary, {
         interactive: false,
@@ -187,6 +186,7 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
       </div>
       <div className={`relative ${styles.frame}`}>
         <div ref={container} className={styles.map} role="region" aria-label="Interactive Nilai road map with seven camera buttons. Use plus and minus to zoom, arrow keys to pan, and Enter to select a focused camera." />
+        {state === "ready" && <MapAttribution />}
         {state !== "ready" && (
           <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center gap-3 bg-slate-950 text-sm text-slate-400" role="status">
             {state === "loading" ? "Loading Nilai roads..." : "Unable to load the road map."}

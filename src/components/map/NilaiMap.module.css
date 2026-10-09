@@ -20,16 +20,6 @@
   background: #24364d;
 }
 
-.map :global(.leaflet-control-attribution) {
-  background: #0b1220eb;
-  color: #94a3b8;
-  font-size: 10px;
-}
-
-.map :global(.leaflet-control-attribution a) {
-  color: #7dd3fc;
-}
-
 .map :global(.leaflet-tooltip) {
   background: #142135;
   border-color: #475569;
