@@ -7,7 +7,7 @@ import type { Map as LeafletMap, Marker } from "leaflet";
 import type { CameraStatusRecord } from "@/hooks/useCameraStatuses";
 import { cameraLocations, type MapCameraCode } from "@/lib/camera-locations";
 import "leaflet/dist/leaflet.css";
-import styles from "./SerembanMap.module.css";
+import styles from "./NilaiMap.module.css";
 
 type RoadProperties = { highway: string; name: string; ref: string };
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -18,7 +18,7 @@ interface Props {
   statusesError?: string;
 }
 
-export default function SerembanMap({ cameras, statusesLoading, statusesError }: Props) {
+export default function NilaiMap({ cameras, statusesLoading, statusesError }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const resetView = useRef<(() => void) | null>(null);
@@ -66,8 +66,8 @@ export default function SerembanMap({ cameras, statusesLoading, statusesError }:
     async function loadMap() {
       const [L, boundaryResponse, roadsResponse] = await Promise.all([
         import("leaflet"),
-        fetch(`${basePath}/maps/seremban-boundary.geojson`, { signal: controller.signal }),
-        fetch(`${basePath}/maps/seremban-roads.geojson`, { signal: controller.signal }),
+        fetch(`${basePath}/maps/nilai-boundary.geojson`, { signal: controller.signal }),
+        fetch(`${basePath}/maps/nilai-roads.geojson`, { signal: controller.signal }),
       ]);
       if (!boundaryResponse.ok || !roadsResponse.ok) throw new Error("Map data unavailable");
       const [boundary, roads] = await Promise.all([
@@ -169,11 +169,11 @@ export default function SerembanMap({ cameras, statusesLoading, statusesError }:
   }, [attempt]);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60" aria-labelledby="seremban-map-title">
+    <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60" aria-labelledby="nilai-map-title">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-4">
         <div>
-          <h2 id="seremban-map-title" className="flex items-center gap-2 font-semibold text-white">
-            <MapPin size={18} className="text-blue-400" /> Seremban & Nilai camera map
+          <h2 id="nilai-map-title" className="flex items-center gap-2 font-semibold text-white">
+            <MapPin size={18} className="text-blue-400" /> Nilai camera map
           </h2>
           <p className="mt-1 text-xs text-slate-400">7 MBS-KDN cameras · Select a camera to view its connectivity</p>
         </div>
@@ -181,15 +181,15 @@ export default function SerembanMap({ cameras, statusesLoading, statusesError }:
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-400">Draft coverage</span>
           <button type="button" disabled={state !== "ready"} onClick={() => cameraView.current?.()} className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"><Camera size={14} /> Seven cameras</button>
           <button type="button" disabled={state !== "ready"} onClick={() => resetView.current?.()} className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40">
-            <LocateFixed size={14} /> Full area
+            <LocateFixed size={14} /> All Nilai
           </button>
         </div>
       </div>
       <div className={`relative ${styles.frame}`}>
-        <div ref={container} className={styles.map} role="region" aria-label="Interactive Seremban and Nilai road map with seven camera buttons. Use plus and minus to zoom, arrow keys to pan, and Enter to select a focused camera." />
+        <div ref={container} className={styles.map} role="region" aria-label="Interactive Nilai road map with seven camera buttons. Use plus and minus to zoom, arrow keys to pan, and Enter to select a focused camera." />
         {state !== "ready" && (
           <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center gap-3 bg-slate-950 text-sm text-slate-400" role="status">
-            {state === "loading" ? "Loading Seremban and Nilai roads..." : "Unable to load the road map."}
+            {state === "loading" ? "Loading Nilai roads..." : "Unable to load the road map."}
             {state === "error" && <button type="button" onClick={() => setAttempt((value) => value + 1)} className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-slate-200"><RotateCcw size={14} /> Try again</button>}
           </div>
         )}
@@ -221,7 +221,7 @@ export default function SerembanMap({ cameras, statusesLoading, statusesError }:
       <div className="flex flex-wrap justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-400">
         <p>Drag to pan · Use + / − to zoom · Click to inspect a location</p>
         <output aria-live="polite" className="font-mono text-sky-400">{point ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : "Latitude, longitude"}</output>
-        <p className="w-full text-slate-500">Client-supplied camera coordinates. Draft map coverage includes Nilai and is not an official administrative boundary. Road data: OpenStreetMap, ODbL.</p>
+        <p className="w-full text-slate-500">Client-supplied camera coordinates. Draft Nilai map coverage and is not an official administrative boundary. Road data: OpenStreetMap, ODbL.</p>
       </div>
     </section>
   );

@@ -1,38 +1,26 @@
-"""Build the bundled road extract. Requires Python shapely (pip install shapely).
+"""Build bundled Nilai roads. Requires Python shapely (pip install shapely).
 
-The border is a DRAFT traced from the supplied screenshot, with approximate
-georeferencing. Replace public/maps/seremban-boundary.geojson with a verified
-GeoJSON Polygon before using this as an authoritative coverage boundary.
-Run with --download to refresh OSM data, or reuse tmp/seremban-roads-raw.json.
+Coverage is a DRAFT display rectangle, not an official administrative boundary.
+Run with --download to refresh OSM data, or reuse tmp/seremban-roads-raw.json
+(the development cache also contains roads outside Nilai, which are clipped).
 """
 import json
 from pathlib import Path
 import sys
 import urllib.parse
 import urllib.request
-from shapely.geometry import LineString, Polygon, mapping, shape
+from shapely.geometry import LineString, box, mapping, shape
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "public/maps"
 DEST.mkdir(parents=True, exist_ok=True)
-boundary_path = DEST / "seremban-boundary.geojson"
+boundary_path = DEST / "nilai-boundary.geojson"
 if not boundary_path.exists():
-    # Pixel positions on the user's 755 x 756 reference, approximately located
-    # against Seremban and Senawang. These are NOT surveyed boundary points.
-    pixels = [(354,34),(111,146),(76,230),(102,365),(101,519),(85,577),
-              (94,658),(147,740),(224,671),(298,557),(316,564),(348,603),
-              (411,605),(451,636),(537,719),(597,654),(560,579),(515,566),
-              (488,586),(456,550),(405,504),(397,477),(414,451),(440,473),
-              (471,487),(502,468),(649,524),(692,487),(690,470),(672,450),
-              (674,421),(686,391),(682,374),(698,334),(693,307),(704,279),
-              (708,257),(691,242),(684,212),(570,230),(602,266),(566,251),
-              (552,231),(520,239),(519,257),(509,235),(417,211),
-              (393,193),(380,174),(358,174),(354,34)]
-    ring = [[round(101.87+x*0.00023,6), round(2.812-y*0.000255,6)] for x,y in pixels]
+    # Display coverage over Nilai, not an official administrative boundary.
     boundary = {"type":"Feature", "properties":{
-        "name":"Seremban review area", "status":"draft",
-        "source":"Approximate trace of user-provided screenshot; not an official boundary",
-    }, "geometry":{"type":"Polygon","coordinates":[ring]}}
+        "name":"Nilai review area", "status":"draft",
+        "source":"Nilai display coverage rectangle; not an official administrative boundary",
+    }, "geometry":mapping(box(101.755,2.765,101.925,2.855))}
     boundary_path.write_text(json.dumps(boundary, separators=(",",":")), encoding="utf-8")
 boundary = json.loads(boundary_path.read_text(encoding="utf-8"))
 polygon = shape(boundary["geometry"])
@@ -72,5 +60,5 @@ output = {"type":"FeatureCollection","features":features,
           "source":"OpenStreetMap contributors", "license":"ODbL-1.0",
           "timestamp":raw.get("osm3s",{}).get("timestamp_osm_base"),
           "boundary_status":boundary["properties"].get("status","unverified")}
-(DEST / "seremban-roads.geojson").write_text(json.dumps(output,separators=(",",":")),encoding="utf-8")
+(DEST / "nilai-roads.geojson").write_text(json.dumps(output,separators=(",",":")),encoding="utf-8")
 print(f"Saved {len(features)} clipped road segments")

@@ -1,7 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import SerembanMap from "@/components/map/SerembanMap";
+import NilaiMap from "@/components/map/NilaiMap";
 
 import {
   type CameraConnectionStatus,
@@ -63,7 +63,7 @@ export default function CameraStatusPage() {
         </button>
       </div>
 
-      <SerembanMap cameras={cameras} statusesLoading={isLoading} statusesError={error} />
+      <NilaiMap cameras={cameras} statusesLoading={isLoading} statusesError={error} />
 
       <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-sm">
