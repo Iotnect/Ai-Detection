@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bell, CloudSun } from "lucide-react";
+import { AlertTriangle, Bell, CloudSun, Moon, Sun } from "lucide-react";
 
 import { useDetectionStream } from "@/hooks/useDetectionStream";
 
@@ -89,6 +89,7 @@ function NotificationBell({ compact = false }: { compact?: boolean }) {
 
 export default function Topbar() {
   const [now, setNow] = useState<Date | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     const updateClock = () => setNow(new Date());
@@ -96,6 +97,24 @@ export default function Topbar() {
     const interval = window.setInterval(updateClock, 30_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("dashboard-theme");
+    const initialTheme = savedTheme === "light" ? "light" : "dark";
+
+    setTheme(initialTheme);
+    document.documentElement.dataset.theme = initialTheme;
+    document.documentElement.style.colorScheme = initialTheme;
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    window.localStorage.setItem("dashboard-theme", nextTheme);
+  };
 
   const time = now?.toLocaleTimeString("en-MY", {
     hour: "2-digit",
@@ -116,6 +135,16 @@ export default function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 lg:gap-5">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
+        </button>
+
         <div className="flex items-center gap-1.5 sm:hidden">
           <CloudSun size={15} className="shrink-0 text-amber-400" />
           <div className="text-right text-[10px] leading-tight">
