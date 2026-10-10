@@ -36,7 +36,7 @@ export default function LoginPage() {
 
     const authenticatedUser = await login(username.trim(), password);
     if (authenticatedUser) {
-      router.push("/");
+      router.push("/camera-status");
     } else {
       setError("Invalid username or password");
     }
