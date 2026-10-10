@@ -19,6 +19,8 @@
   --map-error: #fca5a5;
   --map-error-border: #f87171;
   --map-focus: #38bdf8;
+  --map-rising: #fde047;
+  --map-rising-border: #facc15;
   height: clamp(420px, 65vh, 680px);
   isolation: isolate;
 }
@@ -44,6 +46,8 @@
   --map-error: #b91c1c;
   --map-error-border: #dc2626;
   --map-focus: #0284c7;
+  --map-rising: #854d0e;
+  --map-rising-border: #ca8a04;
 }
 
 .map {
@@ -98,3 +102,35 @@
 .cameraMarker[data-status="error"] { border-color: var(--map-error-border); color: var(--map-error); }
 .cameraMarker[data-selected="true"],
 .cameraMarker:focus-visible { outline: 3px solid var(--map-focus); outline-offset: 3px; }
+
+/* Flood alerts override connectivity colours while the status card keeps both. */
+.cameraMarker[data-flood="rising"] {
+  color: var(--map-rising);
+  border-color: var(--map-rising-border);
+  --flood-ring: #facc1580;
+  animation: floodPulse 1.4s ease-in-out infinite;
+}
+
+.cameraMarker[data-flood="danger"] {
+  color: var(--map-error);
+  border-color: var(--map-error-border);
+  --flood-ring: #ef444480;
+  animation: floodPulse 1.4s ease-in-out infinite;
+}
+
+.floodLabel[data-flood="rising"] { color: var(--map-rising); }
+.floodLabel[data-flood="danger"] { color: var(--map-error); }
+.floodLabel[data-flood="normal"] { color: var(--map-online); }
+
+@keyframes floodPulse {
+  0%, 100% { box-shadow: 0 3px 10px #0005, 0 0 0 2px var(--flood-ring); }
+  50% { box-shadow: 0 3px 10px #0005, 0 0 0 10px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cameraMarker[data-flood="rising"],
+  .cameraMarker[data-flood="danger"] {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--flood-ring);
+  }
+}

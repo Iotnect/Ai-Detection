@@ -5,6 +5,8 @@ import { Camera, LocateFixed, MapPin, RotateCcw, X } from "lucide-react";
 import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from "geojson";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import type { CameraStatusRecord } from "@/hooks/useCameraStatuses";
+import type { LiveDetection } from "@/hooks/useDetectionStream";
+import { findMapFloodDetection, mapFloodStatus } from "@/lib/map-flood-status";
 import { cameraLocations, type MapCameraCode } from "@/lib/camera-locations";
 import { cameraConnectivityMessage, findMapCameraStatus } from "@/lib/map-camera-status";
 import MapAttribution from "./MapAttribution";
@@ -25,9 +27,11 @@ interface Props {
   cameras: CameraStatusRecord[];
   statusesLoading: boolean;
   statusesError?: string;
+  detections: LiveDetection[];
+  detectionsConnected: boolean;
 }
 
-export default function NilaiMap({ cameras, statusesLoading, statusesError }: Props) {
+export default function NilaiMap({ cameras, statusesLoading, statusesError, detections, detectionsConnected }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const resetView = useRef<(() => void) | null>(null);
   const cameraView = useRef<(() => void) | null>(null);
@@ -37,6 +41,8 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
   const [selectedCode, setSelectedCode] = useState<MapCameraCode | null>(null);
   const selectedLocation = cameraLocations.find((camera) => camera.code === selectedCode);
   const selectedStatus = selectedCode ? findMapCameraStatus(cameras, selectedCode) : undefined;
+  const selectedDetection = selectedCode ? findMapFloodDetection(detections, selectedCode) : undefined;
+  const selectedFloodStatus = mapFloodStatus(selectedDetection);
   const selectedStatusStyle = statusStyles[!statusesError && selectedStatus ? selectedStatus.status : "unknown"];
   const statusLabel = (camera?: CameraStatusRecord) => statusesError
     ? "Status unavailable"
@@ -68,12 +74,14 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
       if (!element) continue;
       element.dataset.status = statusesError ? "unknown" : camera?.status || "unknown";
       element.dataset.selected = String(location.code === selectedCode);
+      const floodStatus = mapFloodStatus(findMapFloodDetection(detections, location.code));
+      element.dataset.flood = floodStatus;
       const status = statusesError ? "Status unavailable" : statusesLoading && !camera ? "Loading status" : camera?.status || "Not in camera inventory";
-      element.setAttribute("aria-label", `${location.code}: ${location.location}. ${status}. Open camera status`);
+      element.setAttribute("aria-label", `${location.code}: ${location.location}. ${status}. Water level: ${floodStatus}.${!detectionsConnected && floodStatus !== "unknown" ? " Latest known reading; live updates unavailable." : ""} Open camera status`);
       element.setAttribute("aria-pressed", String(location.code === selectedCode));
       marker?.setZIndexOffset(location.code === selectedCode ? 1000 : 0);
     }
-  }, [cameras, statusesLoading, statusesError, selectedCode, state]);
+  }, [cameras, statusesLoading, statusesError, selectedCode, state, detections, detectionsConnected]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -227,6 +235,11 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
             {statusesError ? <p className="mt-1 text-xs text-amber-400">The latest connectivity check failed. Use Refresh to try again.</p> : selectedStatus ? <p className="mt-2 text-xs leading-5 text-slate-300">{cameraConnectivityMessage(selectedStatus)}</p> : <p className="mt-2 text-xs text-slate-400">{statusesLoading ? "Checking camera connectivity..." : "No matching connectivity record found."}</p>}
             <p className="mt-2 font-mono text-xs text-slate-400">{selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}</p>
             <p className="mt-2 text-xs text-slate-500">Connectivity updates every 30 seconds.</p>
+            <div className="mt-3 border-t border-slate-700 pt-3">
+              <p className="text-sm text-slate-200">Water level: <strong className={styles.floodLabel} data-flood={selectedFloodStatus}>{selectedFloodStatus === "unknown" ? "No reading available" : selectedFloodStatus.toUpperCase()}</strong></p>
+              {selectedDetection && <p className="mt-1 text-xs text-slate-400">Latest reading: {new Date(selectedDetection.timestamp).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })} (MYT)</p>}
+              {!detectionsConnected && <p className="mt-1 text-xs text-slate-400">Live water-level updates unavailable. Any alert shown is the latest known status.</p>}
+            </div>
           </div>
         )}
         {state !== "ready" && (
@@ -238,8 +251,10 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError }: Pr
         <div className="pointer-events-none absolute bottom-7 left-3 z-[500] rounded-lg border border-slate-700 bg-slate-950/95 px-3 py-2 text-[11px] text-slate-300">
           <div className="flex items-center gap-2"><span className={`w-5 border-t-2 ${styles.highwayKey}`} /> Highways & major roads</div>
           <div className="mt-1 flex items-center gap-2"><span className={`w-5 border-t-2 border-dashed ${styles.borderKey}`} /> Border</div>
-          <div className="mt-1">Cameras: green online · amber reconnecting</div>
-          <div>Red error · grey offline / unavailable</div>
+          <div className="mt-1">Pulsing yellow: water rising · pulsing red: danger</div>
+          <div>Steady: green online · amber reconnecting</div>
+          <div>Steady red: error · grey offline / unavailable</div>
+          {!detectionsConnected && <div className="mt-1">Water alerts: latest known · live updates unavailable</div>}
         </div>
       </div>
       <div className="flex flex-wrap justify-between gap-2 border-t border-slate-800 px-4 py-3 text-xs text-slate-400">

@@ -4,9 +4,11 @@ import { RefreshCw } from "lucide-react";
 import NilaiMap from "@/components/map/NilaiMap";
 
 import { useCameraStatuses } from "@/hooks/useCameraStatuses";
+import { useDetectionStream } from "@/hooks/useDetectionStream";
 
 export default function CameraStatusPage() {
   const { cameras, isLoading, error, refresh } = useCameraStatuses();
+  const { detections, connectionState } = useDetectionStream();
 
   return (
     <div className="space-y-6">
@@ -27,7 +29,8 @@ export default function CameraStatusPage() {
         </button>
       </div>
 
-      <NilaiMap cameras={cameras} statusesLoading={isLoading} statusesError={error} />
+      <NilaiMap cameras={cameras} statusesLoading={isLoading} statusesError={error}
+        detections={detections} detectionsConnected={connectionState === "online"} />
     </div>
   );
 }
