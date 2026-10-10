@@ -27,6 +27,14 @@ const DEMO_USERS = [
   { username: "public", password: "public123", role: "public" as UserRole },
 ];
 
+function getDisplayName(email?: string, fullName?: string | null): string {
+  if (email?.toLowerCase() === "tech@iotnect.com") {
+    return "NeoVision Demo";
+  }
+
+  return fullName || email || "User";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (active && profile) {
         setUser({
-          username: profile.full_name || data.session.user.email || "User",
+          username: getDisplayName(
+            data.session.user.email,
+            profile.full_name,
+          ),
           role: profile.role as UserRole,
         });
       }
@@ -106,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData = {
-        username: profile.full_name || data.user.email || "User",
+        username: getDisplayName(data.user.email, profile.full_name),
         role: profile.role as UserRole,
       };
       setUser(userData);
