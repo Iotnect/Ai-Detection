@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
@@ -10,9 +10,25 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const [brand, setBrand] = useState<"mbs" | "neovision" | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setBrand(
+      window.location.hostname.toLowerCase() === "mbs.iotnect.com"
+        ? "mbs"
+        : "neovision",
+    );
+  }, []);
+
+  const logoSrc =
+    brand === "mbs"
+      ? `${basePath}/Majlis_Bandaraya_Seremban.svg`
+      : `${basePath}/neovision.png`;
+  const logoAlt =
+    brand === "mbs" ? "Majlis Bandaraya Seremban logo" : "NeoVision logo";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +48,18 @@ export default function LoginPage() {
       <div className="hidden lg:flex w-1/2 flex-col justify-center items-center p-12 border-r border-slate-800">
         <div className="max-w-md text-center space-y-6">
           <div className="flex justify-center">
-            <Image
-              src={`${basePath}/Majlis_Bandaraya_Seremban.svg`}
-              alt="Majlis Bandaraya Seremban logo"
-              width={300}
-              height={300}
-              className="object-contain"
-              priority
-            />
+            {brand ? (
+              <Image
+                src={logoSrc}
+                alt={logoAlt}
+                width={300}
+                height={300}
+                className="h-[300px] w-[300px] object-contain"
+                priority
+              />
+            ) : (
+              <div className="h-[300px] w-[300px]" aria-hidden="true" />
+            )}
           </div>
           <h1 className="text-3xl font-bold text-white">AI Detection System</h1>
           <p className="text-slate-400 text-lg"></p>
@@ -53,14 +73,18 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden flex justify-center mb-4">
-            <Image
-              src={`${basePath}/Majlis_Bandaraya_Seremban.svg`}
-              alt="Majlis Bandaraya Seremban logo"
-              width={112}
-              height={112}
-              className="object-contain"
-              priority
-            />
+            {brand ? (
+              <Image
+                src={logoSrc}
+                alt={logoAlt}
+                width={112}
+                height={112}
+                className="h-28 w-28 object-contain"
+                priority
+              />
+            ) : (
+              <div className="h-28 w-28" aria-hidden="true" />
+            )}
           </div>
 
           <div>
