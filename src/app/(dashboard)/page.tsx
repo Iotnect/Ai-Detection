@@ -4,18 +4,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Activity, Camera, ChevronRight, Maximize2, VideoOff, X } from "lucide-react";
-import HlsPlayer from "@/components/cctv/HlsPlayer";
+import CameraPlayer from "@/components/cctv/CameraPlayer";
+import { findMapCameraStatus } from "@/lib/map-camera-status";
 import { useCameraStatuses } from "@/hooks/useCameraStatuses";
 import { useDetectionStream } from "@/hooks/useDetectionStream";
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const liveHlsUrl = process.env.NEXT_PUBLIC_HLS_URL;
 const aiHlsUrl = liveHlsUrl
   ? new URL("/mbs-kdn-c1-ai/index.m3u8", liveHlsUrl).toString()
   : undefined;
 
 const cameraFeeds = [
-  { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah", src: "camera-1.v2.mp4" },
+  { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah" },
 ];
 
 export default function DashboardPage() {
@@ -26,6 +26,7 @@ export default function DashboardPage() {
     (typeof cameraFeeds)[number] | null
   >(null);
   const [streamMode, setStreamMode] = useState<"original" | "ai">("original");
+  const cameraStatus = findMapCameraStatus(cameras, "MBS-KDN-C1")?.status;
   const canViewLiveFeed = Boolean(user);
   const selectedHlsUrl = streamMode === "ai" ? aiHlsUrl : liveHlsUrl;
   const handleAiUnavailable = useCallback(() => setStreamMode("original"), []);
@@ -139,43 +140,18 @@ export default function DashboardPage() {
               <div className="aspect-video bg-black relative">
                 {canViewLiveFeed ? (
                   <>
-                    {selectedHlsUrl ? (
-                      <HlsPlayer
-                        key={streamMode}
-                        className="h-full w-full object-cover cursor-zoom-in"
-                        src={selectedHlsUrl}
-                        ariaLabel={`${camera.name} ${streamMode} live camera footage`}
-                        targetLatencySeconds={streamMode === "original" ? 5 : undefined}
-                        onClick={() => setSelectedCamera(camera)}
-                        onUnavailable={
-                          streamMode === "ai" ? handleAiUnavailable : undefined
-                        }
-                      />
-                    ) : (
-                      <video
-                        className="h-full w-full object-cover cursor-zoom-in"
-                        src={`${basePath}/${camera.src}`}
-                        aria-label={`${camera.name} recorded camera footage`}
-                        onClick={() => setSelectedCamera(camera)}
-                        autoPlay
-                        controls
-                        loop
-                        muted
-                        playsInline
-                        preload="metadata"
-                      />
-                    )}
-
-                    <div className="absolute top-3 left-3 flex items-center gap-2 rounded-md bg-black/65 px-2.5 py-1 pointer-events-none">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" />
-                      <span className="text-[11px] text-white font-semibold tracking-wide">
-                        {selectedHlsUrl
-                          ? streamMode === "ai"
-                            ? "AI LIVE"
-                            : "LIVE"
-                          : "DEMO REPLAY"}
-                      </span>
-                    </div>
+                    <CameraPlayer
+                      key={streamMode}
+                      cameraCode={camera.name}
+                      status={cameraStatus}
+                      className="h-full w-full object-cover cursor-zoom-in"
+                      src={selectedHlsUrl}
+                      ariaLabel={`${camera.name} ${streamMode} live camera footage`}
+                      liveLabel={streamMode === "ai" ? "AI LIVE" : "LIVE"}
+                      targetLatencySeconds={streamMode === "original" ? 5 : undefined}
+                      onClick={() => setSelectedCamera(camera)}
+                      onUnavailable={streamMode === "ai" ? handleAiUnavailable : undefined}
+                    />
 
                     <button
                       type="button"
@@ -223,11 +199,7 @@ export default function DashboardPage() {
                   {selectedCamera.name}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  {selectedCamera.location} &middot; {selectedHlsUrl
-                    ? streamMode === "ai"
-                      ? "AI Detection"
-                      : "Original live"
-                    : "Demo replay"}
+                  {selectedCamera.location}
                 </p>
               </div>
               <button
@@ -241,31 +213,17 @@ export default function DashboardPage() {
             </div>
 
             <div className="aspect-video bg-black">
-              {selectedHlsUrl ? (
-                <HlsPlayer
-                  key={`${selectedCamera.id}-${streamMode}`}
-                  className="h-full w-full object-contain"
-                  src={selectedHlsUrl}
-                  ariaLabel={`${selectedCamera.name} enlarged ${streamMode} live camera footage`}
-                  targetLatencySeconds={streamMode === "original" ? 5 : undefined}
-                  onUnavailable={
-                    streamMode === "ai" ? handleAiUnavailable : undefined
-                  }
-                />
-              ) : (
-                <video
-                  key={selectedCamera.id}
-                  className="h-full w-full object-contain"
-                  src={`${basePath}/${selectedCamera.src}`}
-                  aria-label={`${selectedCamera.name} enlarged recorded camera footage`}
-                  autoPlay
-                  controls
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                />
-              )}
+              <CameraPlayer
+                key={`${selectedCamera.id}-${streamMode}`}
+                cameraCode={selectedCamera.name}
+                status={cameraStatus}
+                className="h-full w-full object-contain"
+                src={selectedHlsUrl}
+                ariaLabel={`${selectedCamera.name} enlarged ${streamMode} live camera footage`}
+                liveLabel={streamMode === "ai" ? "AI LIVE" : "LIVE"}
+                targetLatencySeconds={streamMode === "original" ? 5 : undefined}
+                onUnavailable={streamMode === "ai" ? handleAiUnavailable : undefined}
+              />
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ interface HlsPlayerProps {
   targetLatencySeconds?: number;
   onClick?: () => void;
   onUnavailable?: () => void;
+  onAvailable?: () => void;
 }
 
 export default function HlsPlayer({
@@ -22,6 +23,7 @@ export default function HlsPlayer({
   targetLatencySeconds,
   onClick,
   onUnavailable,
+  onAvailable,
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const frameRef = useRef<HTMLCanvasElement>(null);
@@ -212,7 +214,10 @@ export default function HlsPlayer({
     };
 
     const scheduleNativeReconnect = () => {
-      if (!Hls.isSupported()) scheduleReconnect();
+      if (!Hls.isSupported()) {
+        markUnavailable();
+        scheduleReconnect();
+      }
     };
 
     const resumeAtLiveEdge = () => {
@@ -227,6 +232,7 @@ export default function HlsPlayer({
       clearTimeout(nativeRetryTimer);
       nativeRetryTimer = undefined;
       setFailed(false);
+      onAvailable?.();
     };
 
     const handleStalled = () => {
@@ -291,7 +297,7 @@ export default function HlsPlayer({
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
-  }, [src, targetLatencySeconds, onUnavailable]);
+  }, [src, targetLatencySeconds, onUnavailable, onAvailable]);
 
   return (
     <div className="relative h-full w-full bg-black">

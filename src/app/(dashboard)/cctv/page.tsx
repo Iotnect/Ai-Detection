@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Camera, Grid2X2, Grid3X3, Maximize2, RefreshCw, Search, X } from "lucide-react";
 
-import HlsPlayer from "@/components/cctv/HlsPlayer";
+import CameraPlayer from "@/components/cctv/CameraPlayer";
+import { findMapCameraStatus } from "@/lib/map-camera-status";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +96,7 @@ export default function CCTVPage() {
     );
   }, [cameras, search]);
 
+  const monitoredCamera = findMapCameraStatus(cameras, "MBS-KDN-C1");
   const selectedCamera = cameras.find((camera) => camera.id === selectedCameraId);
   const onlineCount = cameras.filter((camera) => camera.status === "online").length;
   const monitoredCount = cameras.filter((camera) => camera.live_stream_enabled).length;
@@ -253,8 +255,10 @@ export default function CCTVPage() {
 
             <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
               <div className="flex aspect-video items-center justify-center bg-black">
-                {selectedCamera.live_stream_enabled && liveHlsUrl ? (
-                  <HlsPlayer
+                {selectedCamera.live_stream_enabled ? (
+                  <CameraPlayer
+                    cameraCode={selectedCamera.id === monitoredCamera?.id ? "MBS-KDN-C1" : selectedCamera.code}
+                    status={selectedCamera.status}
                     className="h-full w-full object-contain"
                     src={liveHlsUrl}
                     ariaLabel={`${selectedCamera.name} live camera footage`}
