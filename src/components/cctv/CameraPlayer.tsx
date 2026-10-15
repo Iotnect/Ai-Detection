@@ -49,11 +49,11 @@ export default function CameraPlayer({
       )}
       {replay ? (
         <video
-          className={className}
+          className={`camera-video ${className || ""}`}
           src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/camera-1.v2.mp4`}
           aria-label={`${cameraCode} recorded demo replay`}
           onClick={onClick}
-          autoPlay controls loop muted playsInline preload="metadata"
+          autoPlay controls={false} loop muted playsInline preload="metadata"
         />
       ) : !src ? (
         <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">

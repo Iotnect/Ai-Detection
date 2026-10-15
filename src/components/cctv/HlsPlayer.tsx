@@ -303,11 +303,12 @@ export default function HlsPlayer({
     <div className="relative h-full w-full bg-black">
       <video
         ref={videoRef}
-        className={className}
+        className={`camera-video ${className || ""}`}
+        style={{ visibility: holdingFrame ? "hidden" : "visible" }}
         aria-label={ariaLabel}
         onClick={onClick}
         autoPlay
-        controls
+        controls={false}
         muted
         playsInline
       />

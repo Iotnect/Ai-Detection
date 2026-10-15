@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Camera playback uses app controls and a retained frame during buffering. */
+.camera-video::-webkit-media-controls,
+.camera-video::-webkit-media-controls-enclosure,
+.camera-video::-webkit-media-controls-panel,
+.camera-video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+}
+
 :root {
   --background: #070b14;
   --foreground: #e2e8f0;
