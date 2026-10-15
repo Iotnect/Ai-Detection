@@ -50,7 +50,7 @@ export default function CameraPlayer({
       {replay ? (
         <video
           className={`camera-video ${className || ""}`}
-          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/camera-1.v2.mp4`}
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/neovision-demo-1015.mp4`}
           aria-label={`${cameraCode} recorded demo replay`}
           onClick={onClick}
           autoPlay controls={false} loop muted playsInline preload="metadata"
