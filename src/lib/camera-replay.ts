@@ -1,3 +1,10 @@
+export const demoReplaySources = {
+  original: "/neovision-demo-1015.mp4",
+  ai: "/neovision-demo-ai.mp4",
+} as const;
+
+export type CameraStreamMode = keyof typeof demoReplaySources;
+
 export function shouldReplayCamera(
   hostname: string,
   cameraCode: string,

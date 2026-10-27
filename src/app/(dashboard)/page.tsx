@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Activity, Camera, ChevronRight, Maximize2, VideoOff, X } from "lucide-react";
 import CameraPlayer from "@/components/cctv/CameraPlayer";
@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const cameraStatus = findMapCameraStatus(cameras, "MBS-KDN-C1")?.status;
   const canViewLiveFeed = Boolean(user);
   const selectedHlsUrl = streamMode === "ai" ? aiHlsUrl : liveHlsUrl;
-  const handleAiUnavailable = useCallback(() => setStreamMode("original"), []);
   const onlineCameraCount = cameras.filter(
     (camera) => camera.status === "online",
   ).length;
@@ -148,9 +147,9 @@ export default function DashboardPage() {
                       src={selectedHlsUrl}
                       ariaLabel={`${camera.name} ${streamMode} live camera footage`}
                       liveLabel={streamMode === "ai" ? "AI LIVE" : "LIVE"}
+                      streamMode={streamMode}
                       targetLatencySeconds={streamMode === "original" ? 5 : undefined}
                       onClick={() => setSelectedCamera(camera)}
-                      onUnavailable={streamMode === "ai" ? handleAiUnavailable : undefined}
                     />
 
                     <button
@@ -221,8 +220,8 @@ export default function DashboardPage() {
                 src={selectedHlsUrl}
                 ariaLabel={`${selectedCamera.name} enlarged ${streamMode} live camera footage`}
                 liveLabel={streamMode === "ai" ? "AI LIVE" : "LIVE"}
+                streamMode={streamMode}
                 targetLatencySeconds={streamMode === "original" ? 5 : undefined}
-                onUnavailable={streamMode === "ai" ? handleAiUnavailable : undefined}
               />
             </div>
           </div>

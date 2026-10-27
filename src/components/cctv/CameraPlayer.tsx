@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import HlsPlayer from "@/components/cctv/HlsPlayer";
-import { shouldReplayCamera } from "@/lib/camera-replay";
+import { demoReplaySources, shouldReplayCamera, type CameraStreamMode } from "@/lib/camera-replay";
 
 interface CameraPlayerProps {
   src?: string;
@@ -12,18 +12,21 @@ interface CameraPlayerProps {
   ariaLabel: string;
   targetLatencySeconds?: number;
   liveLabel?: string;
+  streamMode?: CameraStreamMode;
   onClick?: () => void;
   onUnavailable?: () => void;
 }
 
 export default function CameraPlayer({
   src, cameraCode, status, className, ariaLabel, targetLatencySeconds,
-  liveLabel = "LIVE", onClick, onUnavailable,
+  liveLabel = "LIVE", streamMode = "original", onClick, onUnavailable,
 }: CameraPlayerProps) {
   const [hostname, setHostname] = useState("");
   const [failed, setFailed] = useState(false);
+  const [replayFailed, setReplayFailed] = useState(false);
   useEffect(() => setHostname(window.location.hostname), []);
   useEffect(() => setFailed(false), [src]);
+  useEffect(() => setReplayFailed(false), [streamMode]);
   const handleUnavailable = useCallback(() => {
     setFailed(true);
     onUnavailable?.();
@@ -48,11 +51,17 @@ export default function CameraPlayer({
         </div>
       )}
       {replay ? (
-        <video
+        replayFailed ? (
+          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-400">
+            {streamMode === "ai" ? "AI demo replay is unavailable." : "Demo replay is unavailable."}
+          </div>
+        ) : <video
+          key={streamMode}
           className={`camera-video ${className || ""}`}
-          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/neovision-demo-1015.mp4`}
-          aria-label={`${cameraCode} recorded demo replay`}
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${demoReplaySources[streamMode]}`}
+          aria-label={`${cameraCode} ${streamMode} recorded demo replay`}
           onClick={onClick}
+          onError={() => setReplayFailed(true)}
           autoPlay controls={false} loop muted playsInline preload="metadata"
         />
       ) : !src ? (
@@ -64,7 +73,7 @@ export default function CameraPlayer({
         <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/65 px-2.5 py-1">
           <span className="h-2 w-2 rounded-full bg-amber-400" />
           <span className="text-[11px] font-semibold tracking-wide text-white">
-            {replay ? "DEMO REPLAY" : failed ? "STREAM UNAVAILABLE" : liveLabel}
+            {replay ? replayFailed ? "DEMO UNAVAILABLE" : streamMode === "ai" ? "AI DEMO REPLAY" : "DEMO REPLAY" : failed ? "STREAM UNAVAILABLE" : liveLabel}
           </span>
         </div>
       )}
