@@ -13,19 +13,19 @@ export default function WorkspaceLanding() {
           alt="NeoVision" width={240} height={240} priority unoptimized
           className="mb-6 h-44 w-60 object-contain object-left" />
         <h1 className="text-3xl font-semibold text-white sm:text-4xl">Choose your project</h1>
-        <p className="mt-3 max-w-xl text-base text-slate-400">Open the MBS monitoring dashboard or explore the UM demo.</p>
+        <p className="mt-3 max-w-xl text-base text-slate-400">Select MBS or Universiti Malaya to open your dashboard.</p>
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
           <Link href="/camera-status" prefetch={false}
             className="group flex min-h-52 flex-col justify-between rounded-xl border border-slate-700 bg-slate-900 p-7 transition hover:border-blue-500 hover:bg-slate-800 active:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
             <div><h2 className="text-3xl font-semibold text-white">MBS</h2>
               <p className="mt-3 text-sm text-slate-400">Majlis Bandaraya Seremban</p></div>
-            <span className="mt-8 text-sm font-medium text-blue-400">Open dashboard</span>
+            <span className="mt-8 text-sm font-medium text-blue-400">Open Dashboard</span>
           </Link>
           <Link href="/um" prefetch={false}
             className="group flex min-h-52 flex-col justify-between rounded-xl border border-slate-700 bg-slate-900 p-7 transition hover:border-blue-500 hover:bg-slate-800 active:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
-            <div><h2 className="text-3xl font-semibold text-white">UM</h2>
+            <div><h2 className="text-3xl font-semibold text-white">Universiti Malaya</h2>
               <p className="mt-3 text-sm text-slate-400">Demo workspace</p></div>
-            <span className="mt-8 text-sm font-medium text-blue-400">Open demo</span>
+            <span className="mt-8 text-sm font-medium text-blue-400">Open Dashboard</span>
           </Link>
         </div>
       </main>
