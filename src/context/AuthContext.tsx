@@ -1,9 +1,16 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-import { supabase } from "@/lib/supabase";
+import { isPublicDemoRoute } from "@/lib/workspace";
+
+let authClient: (typeof import("@/lib/supabase"))["supabase"] | undefined;
+
+async function getAuthClient() {
+  authClient = (await import("@/lib/supabase")).supabase;
+  return authClient;
+}
 
 export type UserRole = "admin" | "client" | "public";
 
@@ -39,11 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     let active = true;
 
     const loadUser = async () => {
+      if (isPublicDemoRoute(window.location.hostname, pathname)) {
+        authClient?.auth.stopAutoRefresh();
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      const supabase = await getAuthClient();
+      if (!active) return;
+      supabase?.auth.startAutoRefresh();
       if (!supabase) {
         try {
           const saved = localStorage.getItem("flood_user");
@@ -87,9 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   const login = async (identifier: string, password: string): Promise<User | null> => {
+    const supabase = await getAuthClient();
     if (supabase) {
       const normalizedIdentifier = identifier.trim().toLowerCase();
       const usernameDomain =
@@ -138,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    const supabase = await getAuthClient();
     if (supabase) await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem("flood_user");

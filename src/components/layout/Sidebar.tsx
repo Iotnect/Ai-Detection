@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
+import { useHostname } from "@/hooks/useHostname";
+import { isNeoVisionHost } from "@/lib/workspace";
 
 const menuItems = [
   {
@@ -52,6 +54,7 @@ const menuItems = [
 ];
 
 interface SidebarProps {
+  demo?: boolean;
   isCollapsed: boolean;
   isMobileOpen: boolean;
   onToggleCollapse: () => void;
@@ -59,6 +62,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
+  demo = false,
   isCollapsed,
   isMobileOpen,
   onToggleCollapse,
@@ -66,15 +70,22 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const hostname = useHostname();
+  const neoVision = hostname !== null && isNeoVisionHost(hostname);
 
   const handleLogout = () => {
     onCloseMobile();
     void logout();
   };
 
-  const filteredMenu = menuItems.filter((item) =>
-    item.roles.includes(user?.role || "")
-  );
+  const demoRoutes: Record<string, string> = {
+    Dashboard: "/um", "AI Detection": "/um/ai-detection",
+    "Water Level": "/um/water-level", "Display Log": "/um/display-log", Reporting: "/um/reporting",
+  };
+  const filteredMenu = menuItems
+    .filter((item) => demo || item.roles.includes(user?.role || ""))
+    .map((item) => ({ ...item, href: demo ? demoRoutes[item.name]
+      : item.href === "/" && neoVision ? "/ai-detection" : item.href }));
 
   return (
     <aside
@@ -93,7 +104,9 @@ export default function Sidebar({
         )}
       >
         <div className={cn("min-w-0", isCollapsed && "lg:hidden")}>
-          <Logo />
+          {demo ? (
+            <div className="text-sm font-semibold text-white">UM<span className="block text-xs font-normal text-slate-400">NeoVision Demo</span></div>
+          ) : <Logo />}
         </div>
 
         <button
@@ -117,6 +130,12 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
+        {neoVision && (
+          <Link href="/" prefetch={false} onClick={onCloseMobile}
+            className="mb-3 flex min-h-11 items-center rounded-lg px-3 text-sm text-slate-400 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500">
+            {isCollapsed ? "Home" : "Back to projects"}
+          </Link>
+        )}
         {filteredMenu.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -159,15 +178,15 @@ export default function Sidebar({
           </div>
           <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
             <p className="truncate text-sm font-medium text-slate-200">
-              {user?.username ?? "User"}
+              {demo ? "UM Demo" : user?.username ?? "User"}
             </p>
             <p className="truncate text-xs capitalize text-slate-500">
-              {user?.role ?? "account"}
+              {demo ? "Demo workspace" : user?.role ?? "account"}
             </p>
           </div>
         </div>
 
-        <button
+        {!demo && <button
           type="button"
           onClick={handleLogout}
           className={cn(
@@ -179,7 +198,7 @@ export default function Sidebar({
         >
           <LogOut size={16} aria-hidden="true" />
           <span className={cn(isCollapsed && "lg:hidden")}>Sign out</span>
-        </button>
+        </button>}
       </div>
 
       <div
@@ -188,7 +207,7 @@ export default function Sidebar({
           isCollapsed && "lg:hidden"
         )}
       >
-        © 2026 MBS-KDN • Flood Detection
+        {demo ? "UM • Demo workspace" : "© 2026 MBS-KDN • Flood Detection"}
       </div>
     </aside>
   );

@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Bell, CloudSun, Moon, Sun } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { useDetectionStream } from "@/hooks/useDetectionStream";
+import type { LiveDetection } from "@/hooks/useDetectionStream";
 
-function NotificationBell({ compact = false }: { compact?: boolean }) {
+const ConnectedNotificationBell = dynamic(() => import("./ConnectedNotificationBell"));
+
+export function NotificationBell({ compact = false, detections = [] }: { compact?: boolean; detections?: LiveDetection[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { detections } = useDetectionStream();
   const alerts = detections.filter(
     (detection) => detection.status.toUpperCase() !== "NORMAL",
   );
@@ -87,7 +89,7 @@ function NotificationBell({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export default function Topbar() {
+export default function Topbar({ demo = false, landing = false }: { demo?: boolean; landing?: boolean }) {
   const [now, setNow] = useState<Date | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -127,10 +129,10 @@ export default function Topbar() {
   });
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-slate-800 bg-[#0b1220] pl-14 pr-2 sm:px-6">
+    <header className={`sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-slate-800 bg-[#0b1220] pr-2 sm:px-6 ${landing ? "pl-4" : "pl-14"}`}>
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <h1 className="truncate text-xs font-medium text-white sm:text-sm">
-          AI Detection<span className="hidden sm:inline"> Dashboard</span>
+          {landing ? "NeoVision" : demo ? "UM Demo" : "AI Detection"}<span className="hidden sm:inline">{landing ? " Projects" : " Dashboard"}</span>
         </h1>
       </div>
 
@@ -164,7 +166,7 @@ export default function Topbar() {
           <span className="font-mono text-blue-400">{time ?? "--:--"}</span>
         </div>
 
-        <NotificationBell compact />
+        {demo || landing ? <span className="text-xs text-slate-400">{demo ? "Demo" : ""}</span> : <ConnectedNotificationBell />}
       </div>
     </header>
   );

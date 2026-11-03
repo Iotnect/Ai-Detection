@@ -18,7 +18,7 @@ const cameraFeeds = [
   { id: 1, name: "MBS-KDN-C1", location: "Sungai Taman Ros Merah" },
 ];
 
-export default function DashboardPage() {
+export default function AiDetectionPage() {
   const { user } = useAuth();
   const { detections, connectionState } = useDetectionStream();
   const { cameras, isLoading: areCameraStatusesLoading } = useCameraStatuses();
