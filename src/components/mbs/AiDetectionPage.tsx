@@ -241,13 +241,13 @@ export default function AiDetectionPage() {
         <div className="flex items-center gap-2 mb-4">
           <Activity size={18} className="text-blue-400" />
           <h2 className="font-semibold text-white">Event Log</h2>
-          {(replay || connectionState !== "disabled") && (
+          {!replay && connectionState !== "disabled" && (
             <span
               className={`ml-auto text-xs ${
-                !replay && connectionState === "online" ? "text-emerald-400" : "text-amber-400"
+                connectionState === "online" ? "text-emerald-400" : "text-amber-400"
               }`}
             >
-              {replay ? "Demo replay" : connectionState === "online" ? "Live" : "Reconnecting"}
+              {connectionState === "online" ? "Live" : "Reconnecting"}
             </span>
           )}
         </div>
