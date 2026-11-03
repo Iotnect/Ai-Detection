@@ -4,6 +4,7 @@ import { Activity, Waves } from "lucide-react";
 
 import { useDetectionHistory } from "@/hooks/useDetectionHistory";
 import { useDetectionStream } from "@/hooks/useDetectionStream";
+import { useWaterLevelReplay } from "@/hooks/useWaterLevelReplay";
 
 const CAMERA_ID = "MBS-KDN-C1";
 const MAX_CHART_BARS = 180;
@@ -19,7 +20,7 @@ function evenlySample<T>(items: T[], maximum: number): T[] {
 
 function statusColor(status?: string): string {
   if (status?.toUpperCase() === "DANGER") return "text-red-400";
-  if (status?.toUpperCase() === "WARNING") return "text-amber-400";
+  if (["WARNING", "RISING"].includes(status?.toUpperCase() ?? "")) return "text-amber-400";
   return "text-emerald-400";
 }
 
@@ -28,6 +29,7 @@ export default function WaterLevelPage() {
   const { events, isLoading } = useDetectionHistory(1_000);
   const live = detections.find((detection) => detection.camera_id === CAMERA_ID);
   const cameraHistory = events.filter((event) => event.camera_id === CAMERA_ID);
+  const replay = useWaterLevelReplay(cameraHistory, live);
   const since = Date.now() - 24 * 60 * 60 * 1_000;
   const persistedLast24Hours = cameraHistory
     .filter((event) => new Date(event.timestamp).getTime() >= since)
@@ -41,10 +43,11 @@ export default function WaterLevelPage() {
   const latestPersistedTimestamp = latestPersisted
     ? new Date(latestPersisted.timestamp).getTime()
     : Number.NEGATIVE_INFINITY;
-  const last24Hours =
+  const last24Hours = replay?.events ?? (
     live && Number.isFinite(liveTimestamp) && liveTimestamp > latestPersistedTimestamp
       ? [...persistedLast24Hours, live]
-      : persistedLast24Hours;
+      : persistedLast24Hours);
+  const current = replay?.current ?? live;
   const chartEvents = evenlySample(last24Hours, MAX_CHART_BARS);
   const values = last24Hours.map((event) => event.smoothed_y);
   const minY = values.length ? Math.min(...values) : undefined;
@@ -61,18 +64,19 @@ export default function WaterLevelPage() {
             Real-time water-line monitoring &bull; Sungai Taman Ros Merah
           </p>
         </div>
-        <span className={`text-xs ${connectionState === "online" ? "text-emerald-400" : "text-amber-400"}`}>
-          {connectionState === "online" ? "Backend connected" : "Reconnecting"}
+        <span className={`text-xs ${!replay && connectionState === "online" ? "text-emerald-400" : "text-amber-400"}`}>
+          {replay ? "Demo replay · Historical readings" : connectionState === "online" ? "Backend connected" : "Reconnecting"}
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-400">Current Water Y</p>
-          <p className="mt-1 text-2xl font-bold text-white">{live?.smoothed_y ?? "--"}</p>
-          <p className={`mt-1 text-xs ${statusColor(live?.status)}`}>
-            {live?.status ?? "Waiting for live inference"}
+          <p className="mt-1 text-2xl font-bold text-white">{current?.smoothed_y ?? "--"}</p>
+          <p className={`mt-1 text-xs ${statusColor(current?.status)}`}>
+            {current?.status ?? "Waiting for live inference"}
           </p>
+          {replay && <p className="mt-2 text-xs text-slate-400">Recorded {new Date(replay.current.timestamp).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })} (MYT)</p>}
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
           <p className="text-sm text-slate-400">24h Minimum Y</p>
@@ -90,7 +94,7 @@ export default function WaterLevelPage() {
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Waves size={18} className="text-blue-400" />
-            <h2 className="font-semibold text-white">24-hour Water Y Trend</h2>
+            <h2 className="font-semibold text-white">{replay ? "Historical Water Y Trend" : "24-hour Water Y Trend"}</h2>
           </div>
           <span className="text-xs text-slate-500">{last24Hours.length} samples</span>
         </div>
@@ -131,7 +135,7 @@ export default function WaterLevelPage() {
             <div className="mt-3 flex justify-between text-xs text-slate-500">
               <span>{new Date(last24Hours[0].timestamp).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" })}</span>
               <span>Water-line Y coordinate</span>
-              <span>Now</span>
+              <span>{replay ? new Date(last24Hours.at(-1)!.timestamp).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }) : "Now"}</span>
             </div>
           </>
         )}

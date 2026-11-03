@@ -1,5 +1,12 @@
 # NeoVision project selection
 
+On `neovision.iotnect.com` only, MBS Water Level can replay the latest available
+24-hour historical window when no reading is newer than two minutes. The current
+value advances through those stored readings every five seconds. Replay is labelled
+and retains the original timestamps; fresh inference automatically takes priority.
+If history cannot be loaded, the existing empty state remains. No replay records
+are written to the backend or included in reporting exports.
+
 `neovision.iotnect.com/` is a public project selector with the existing
 NeoVision logo and two cards:
 
