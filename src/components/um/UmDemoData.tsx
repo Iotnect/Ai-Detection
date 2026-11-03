@@ -12,10 +12,14 @@ export function UmEventLog() {
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
       <div className="mb-4"><h2 className="font-semibold text-white">Event Log</h2></div>
-      <div className="space-y-3">{newestFirst.slice(0, 6).map(event => (
-        <article key={event.timestamp} className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+      <div className="space-y-3">{newestFirst.slice(0, 1).map(event => (
+        <article key={event.timestamp} className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
           <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-400"><span>{event.camera_id} · WATER_LEVEL</span><time dateTime={event.timestamp}>{formatDemoTime(event.timestamp)}</time></div>
-          <p className={`mt-2 text-sm font-semibold ${demoStatusClass(event.status)}`}>{event.message}</p>
+          <p className={`mt-2 text-sm font-bold ${event.status === "DANGER"
+            ? "text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.7)]"
+            : event.status === "RISING"
+              ? "text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.7)]"
+              : "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.7)]"}`}>{event.message}</p>
           <p className="mt-1 text-xs text-slate-400">{event.status} · Water Y: {event.smoothed_y}</p>
         </article>
       ))}</div>
