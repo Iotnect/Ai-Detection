@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+import { isNeoVisionHost } from "@/lib/workspace";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -36,7 +37,7 @@ export default function LoginPage() {
 
     const authenticatedUser = await login(username.trim(), password);
     if (authenticatedUser) {
-      router.push("/camera-status");
+      router.replace(isNeoVisionHost(window.location.hostname) ? "/" : "/camera-status");
     } else {
       setError("Invalid username or password");
     }
