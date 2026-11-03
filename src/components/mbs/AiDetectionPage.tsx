@@ -8,6 +8,10 @@ import CameraPlayer from "@/components/cctv/CameraPlayer";
 import { findMapCameraStatus } from "@/lib/map-camera-status";
 import { useCameraStatuses } from "@/hooks/useCameraStatuses";
 import { useDetectionStream } from "@/hooks/useDetectionStream";
+import { useDetectionHistory } from "@/hooks/useDetectionHistory";
+import { useWaterLevelReplay } from "@/hooks/useWaterLevelReplay";
+import { useHostname } from "@/hooks/useHostname";
+import { isNeoVisionHost } from "@/lib/workspace";
 
 const liveHlsUrl = process.env.NEXT_PUBLIC_HLS_URL;
 const aiHlsUrl = liveHlsUrl
@@ -21,6 +25,10 @@ const cameraFeeds = [
 export default function AiDetectionPage() {
   const { user } = useAuth();
   const { detections, connectionState } = useDetectionStream();
+  const hostname = useHostname();
+  const { events: history } = useDetectionHistory(1_000, isNeoVisionHost(hostname ?? ""));
+  const replay = useWaterLevelReplay(history, detections.find(detection => detection.camera_id === "MBS-KDN-C1"));
+  const displayedDetections = replay ? [replay.current] : detections;
   const { cameras, isLoading: areCameraStatusesLoading } = useCameraStatuses();
   const [selectedCamera, setSelectedCamera] = useState<
     (typeof cameraFeeds)[number] | null
@@ -233,32 +241,32 @@ export default function AiDetectionPage() {
         <div className="flex items-center gap-2 mb-4">
           <Activity size={18} className="text-blue-400" />
           <h2 className="font-semibold text-white">Event Log</h2>
-          {connectionState !== "disabled" && (
+          {(replay || connectionState !== "disabled") && (
             <span
               className={`ml-auto text-xs ${
-                connectionState === "online" ? "text-emerald-400" : "text-amber-400"
+                !replay && connectionState === "online" ? "text-emerald-400" : "text-amber-400"
               }`}
             >
-              {connectionState === "online" ? "Live" : "Reconnecting"}
+              {replay ? "Demo replay" : connectionState === "online" ? "Live" : "Reconnecting"}
             </span>
           )}
         </div>
 
         <div className="space-y-3">
-          {connectionState === "connecting" ? (
+          {!replay && connectionState === "connecting" ? (
             <p className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-8 text-center text-sm text-slate-500">
               Connecting to AI event stream...
             </p>
-          ) : !detections.length ? (
+          ) : !displayedDetections.length ? (
             <p className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-8 text-center text-sm text-slate-500">
               Waiting for AI inference events.
             </p>
           ) : (
-            detections.map((detection) => ({
+            displayedDetections.map((detection) => ({
                 id: `${detection.camera_id}-${detection.received_at}`,
                 type: detection.event_type,
                 message: detection.message,
-                time: new Date(detection.timestamp).toLocaleString(),
+                time: `${replay ? "Recorded " : ""}${new Date(detection.timestamp).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}`,
                 level:
                   detection.status.toUpperCase() === "DANGER"
                     ? "danger"

@@ -6,6 +6,9 @@ value advances through those stored readings every five seconds. Replay is label
 and retains the original timestamps; fresh inference automatically takes priority.
 If history cannot be loaded, the existing empty state remains. No replay records
 are written to the backend or included in reporting exports.
+MBS AI Detection's Event Log uses the same replay policy on NeoVision, showing
+one historical event at a time with the existing status glow and recorded timestamp.
+It does not request replay history on other hostnames.
 
 `neovision.iotnect.com/` is a public project selector with the existing
 NeoVision logo and two cards:

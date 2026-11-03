@@ -5,12 +5,13 @@ import { useCallback, useEffect, useState } from "react";
 import type { LiveDetection } from "@/hooks/useDetectionStream";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
-export function useDetectionHistory(limit = 500) {
+export function useDetectionHistory(limit = 500, enabled = true) {
   const [events, setEvents] = useState<LiveDetection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
     if (!apiUrl) {
       setError("Backend API is not configured.");
@@ -43,9 +44,10 @@ export function useDetectionHistory(limit = 500) {
     } finally {
       setIsLoading(false);
     }
-  }, [limit]);
+  }, [limit, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     void refresh();
     const interval = window.setInterval(() => void refresh(), 30_000);
 
@@ -58,7 +60,7 @@ export function useDetectionHistory(limit = 500) {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [refresh]);
+  }, [refresh, enabled]);
 
   return { events, isLoading, error, refresh };
 }
