@@ -17,18 +17,15 @@ const titles: Record<View, string> = {
 
 function DemoVideo({ mode }: { mode: Mode }) {
   const [failed, setFailed] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const src = umDemo.videos[mode];
   useEffect(() => setFailed(false), [src]);
 
   return (
     <div className="relative aspect-video w-full bg-black">
       {src && !failed ? (
-        <video ref={videoRef} key={src} src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}`}
+        <video key={src} src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}`}
           className="camera-video h-full w-full object-contain" aria-label={`UM ${mode} video`}
           width={1920} height={1080} autoPlay loop muted playsInline controls={false}
-          onPlay={() => setPaused(false)} onPause={() => setPaused(true)}
           onError={() => setFailed(true)} />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center text-[#cbd5e1]">
@@ -36,14 +33,10 @@ function DemoVideo({ mode }: { mode: Mode }) {
           <p className="text-sm">{failed ? "Video is unavailable." : `${mode === "ai" ? "AI" : "Original"} video has not been added yet.`}</p>
         </div>
       )}
-      <span className="pointer-events-none absolute left-3 top-3 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">{mode === "ai" ? "AI Detection" : "Original"}</span>
-      {src && !failed && <button type="button" onClick={() => {
-        const video = videoRef.current;
-        if (video?.paused) void video.play().catch(() => setPaused(true));
-        else video?.pause();
-      }} className="absolute bottom-3 right-3 min-h-11 rounded-md bg-black/70 px-4 text-sm text-white hover:bg-blue-600 active:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-400">
-        {paused ? "Play video" : "Pause video"}
-      </button>}
+      <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-400" />
+        {mode === "ai" ? "AI DEMO REPLAY" : "DEMO REPLAY"}
+      </span>
     </div>
   );
 }
