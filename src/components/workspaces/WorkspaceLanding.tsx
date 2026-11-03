@@ -24,7 +24,7 @@ export default function WorkspaceLanding() {
           <Link href="/um" prefetch={false}
             className="group flex min-h-52 flex-col justify-between rounded-xl border border-slate-700 bg-slate-900 p-7 transition hover:border-blue-500 hover:bg-slate-800 active:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
             <div><h2 className="text-3xl font-semibold text-white">Universiti Malaya</h2>
-              <p className="mt-3 text-sm text-slate-400">Demo workspace</p></div>
+              <p className="mt-3 text-sm text-slate-400">Campus monitoring</p></div>
             <span className="mt-8 text-sm font-medium text-blue-400">Open Dashboard</span>
           </Link>
         </div>

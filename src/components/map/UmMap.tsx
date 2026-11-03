@@ -136,7 +136,7 @@ export default function UmMap() {
     <section aria-labelledby="um-map-title" className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 p-4">
         <div><h2 id="um-map-title" className="flex items-center gap-2 font-semibold text-white"><MapPin size={18} className="text-blue-400" aria-hidden="true" /> Universiti Malaya camera map</h2>
-          <p className="mt-1 text-xs text-slate-400">1 demo camera · Select the camera to view its details</p></div>
+          <p className="mt-1 text-xs text-slate-400">1 camera · Select the camera to view its details</p></div>
         <div className="flex flex-wrap gap-3">
           <button type="button" disabled={state !== "ready"} className={buttonStyle} onClick={() => mapRef.current?.setView([camera.latitude, camera.longitude], 17, { animate: false })}><Camera size={14} aria-hidden="true" /> Camera location</button>
           <button type="button" disabled={state !== "ready"} className={buttonStyle} onClick={() => mapRef.current?.fitBounds(coverage, { padding: [20, 20], animate: false })}><LocateFixed size={14} aria-hidden="true" /> Surrounding area</button>
@@ -147,11 +147,9 @@ export default function UmMap() {
         {selected && state === "ready" && <div className="absolute right-3 top-3 z-[550] max-h-[calc(100%-2rem)] w-80 max-w-[calc(100%-4.5rem)] overflow-y-auto rounded-xl border border-slate-600 bg-slate-950 p-4 shadow-xl" role="region" aria-label="UM camera details">
           <div className="flex items-start justify-between gap-2"><div><h3 className="font-semibold text-white">{camera.code}</h3><p className="mt-1 text-sm text-slate-300">{camera.name}</p></div>
             <button type="button" onClick={closeDetails} aria-label="Close UM camera details" className="rounded-lg p-3 text-slate-400 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500"><X size={17} /></button></div>
-          <p className="mt-3 text-sm text-slate-300">Source: <strong>Recorded demo</strong></p>
           <p className="mt-2 font-mono text-xs text-slate-400">{camera.latitude.toFixed(6)}, {camera.longitude.toFixed(6)}</p>
           <div className="mt-4 border-t border-slate-700 pt-3"><p className="text-sm text-slate-300">Water level: <strong className={demoStatusClass(latestReading.status)}>{latestReading.status}</strong></p>
-            <p className="mt-2 text-xs text-slate-400">Sample Water Y: {latestReading.smoothed_y}<br />{formatDemoTime(latestReading.timestamp)}</p>
-            <p className="mt-2 text-xs text-slate-400">Illustrative data, not live camera connectivity.</p></div>
+            <p className="mt-2 text-xs text-slate-400">Water Y: {latestReading.smoothed_y}<br />{formatDemoTime(latestReading.timestamp)}</p></div>
           <Link href="/um/ai-detection" className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-4 text-sm text-white hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-blue-400">Open AI Detection</Link>
         </div>}
         {state !== "ready" && <div role="status" className="absolute inset-0 z-[500] flex flex-col items-center justify-center gap-4 bg-slate-950 p-5 text-center text-sm text-slate-400">

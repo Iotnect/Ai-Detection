@@ -15,7 +15,7 @@ routing restriction, not a security boundary for confidential demo assets.
 Its sidebar reuses the MBS layout with local pages at `/um`,
 `/um/ai-detection`, `/um/water-level`, `/um/display-log`, and `/um/reporting`.
 Event Log, Water Level and Display Log share local illustrative readings based
-on the MBS format, labelled as sample data. These are not live UM measurements
+on the MBS format. The UI uses neutral workspace labels. These are not live UM measurements
 or a copy of MBS historical records. The dataset is in `src/lib/um-demo-data.ts`.
 Display Log supports local text search and status filtering. The UM dashboard
 has a Leaflet map with a camera at user-supplied coordinates 3.118629,

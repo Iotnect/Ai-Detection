@@ -32,7 +32,7 @@ const messages: Record<DemoWaterStatus, string> = {
 };
 
 export const umDemoEvents: UmDemoEvent[] = samples.map(([timestamp, smoothed_y, status]) => ({
-  camera_id: "UM-DEMO-C1", timestamp, smoothed_y, status, message: messages[status],
+  camera_id: "UM-C1", timestamp, smoothed_y, status, message: messages[status],
 }));
 
 export function formatDemoTime(timestamp: string) {

@@ -132,7 +132,7 @@ export default function Topbar({ demo = false, landing = false }: { demo?: boole
     <header className={`sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-slate-800 bg-[#0b1220] pr-2 sm:px-6 ${landing ? "pl-4" : "pl-14"}`}>
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <h1 className="truncate text-xs font-medium text-white sm:text-sm">
-          {landing ? "NeoVision" : demo ? "UM Demo" : "AI Detection"}<span className="hidden sm:inline">{landing ? " Projects" : " Dashboard"}</span>
+          {landing ? "NeoVision" : demo ? "UM" : "AI Detection"}<span className="hidden sm:inline">{landing ? " Projects" : " Dashboard"}</span>
         </h1>
       </div>
 
@@ -166,7 +166,7 @@ export default function Topbar({ demo = false, landing = false }: { demo?: boole
           <span className="font-mono text-blue-400">{time ?? "--:--"}</span>
         </div>
 
-        {demo || landing ? <span className="text-xs text-slate-400">{demo ? "Demo" : ""}</span> : <ConnectedNotificationBell />}
+        {!demo && !landing && <ConnectedNotificationBell />}
       </div>
     </header>
   );

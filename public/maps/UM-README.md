@@ -1,6 +1,6 @@
 # Universiti Malaya camera map
 
-Camera: `UM-DEMO-C1`, Q Bistro Universiti Malaya.
+Camera: `UM-C1`, Q Bistro Universiti Malaya.
 Latitude: `3.118629`, longitude: `101.661867`.
 The camera point comes from the coordinate selected in the user's screenshot.
 It does not describe a measured viewing direction or field of view.
@@ -16,5 +16,5 @@ if needed. The browser loads the resulting GeoJSON locally. It does not query
 external tile servers or mapping APIs.
 
 The map uses the same theme palette as the MBS map. Camera details show the
-latest local UM demo reading, explicitly marked as illustrative. No live
+latest local UM demo reading. The UI uses neutral workspace labels. No live
 camera connectivity is inferred from the marker.

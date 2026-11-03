@@ -1,7 +1,7 @@
 export const umDemo = {
-  cameraName: "UM Demo Camera",
+  cameraName: "UM-C1",
   cameraLocation: {
-    code: "UM-DEMO-C1",
+    code: "UM-C1",
     name: "Q Bistro Universiti Malaya",
     latitude: 3.118629,
     longitude: 101.661867,

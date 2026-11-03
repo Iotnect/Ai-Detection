@@ -106,7 +106,7 @@ export default function Sidebar({
       >
         <div className={cn("min-w-0", isCollapsed && "lg:hidden")}>
           {demo ? (
-            <div className="text-sm font-semibold text-white">UM<span className="block text-xs font-normal text-slate-400">NeoVision Demo</span></div>
+            <div className="text-sm font-semibold text-white">UM<span className="block text-xs font-normal text-slate-400">NeoVision</span></div>
           ) : <Logo />}
         </div>
 
@@ -185,10 +185,10 @@ export default function Sidebar({
           </div>
           <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
             <p className="truncate text-sm font-medium text-slate-200">
-              {demo ? "UM Demo" : user?.username ?? "User"}
+              {demo ? "Universiti Malaya" : user?.username ?? "User"}
             </p>
             <p className="truncate text-xs capitalize text-slate-500">
-              {demo ? "Demo workspace" : user?.role ?? "account"}
+              {demo ? "Workspace" : user?.role ?? "account"}
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function Sidebar({
           isCollapsed && "lg:hidden"
         )}
       >
-        {demo ? "UM • Demo workspace" : "© 2026 MBS-KDN • Flood Detection"}
+        {demo ? "UM • NeoVision" : "© 2026 MBS-KDN • Flood Detection"}
       </div>
     </aside>
   );
