@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, Maximize2, X } from "lucide-react";
 import { umDemo } from "@/lib/um-demo";
+import { UmDisplayLog, UmEventLog, UmWaterLevel } from "./UmDemoData";
 
 type View = "dashboard" | "ai-detection" | "water-level" | "display-log" | "reporting";
 type Mode = "original" | "ai";
@@ -106,22 +107,12 @@ export default function UmWorkspace({ view }: { view: View }) {
               className="absolute right-3 top-3 rounded-md bg-black/70 p-3 text-white hover:bg-blue-600 active:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-400"><Maximize2 size={18} /></button>
           </article>
         </section>
-        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-          <h2 className="font-semibold text-white">Event Log</h2><p className="py-8 text-center text-sm text-slate-400">No demo inference events have been added.</p>
-        </section>
+        <UmEventLog />
       </>}
 
-      {view === "water-level" && <>
-        <div className="grid gap-4 sm:grid-cols-3">{["Current Water Y", "Minimum Water Y", "Maximum Water Y"].map((label) => (
-          <section key={label} className="rounded-xl border border-slate-800 bg-slate-900/60 p-5"><h2 className="text-sm text-slate-400">{label}</h2><p className="mt-2 text-2xl font-semibold text-white">--</p></section>
-        ))}</div>
-        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5"><h2 className="font-semibold text-white">Water Y Trend</h2><p className="py-16 text-center text-sm text-slate-400">No demo water-level readings have been added.</p></section>
-      </>}
+      {view === "water-level" && <UmWaterLevel />}
 
-      {view === "display-log" && <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
-        <div className="flex justify-between border-b border-slate-800 px-5 py-4 text-sm"><h2 className="font-semibold text-white">Event history</h2><span className="text-slate-400">0 demo records</span></div>
-        <p className="p-12 text-center text-sm text-slate-400">No demo events have been added.</p>
-      </section>}
+      {view === "display-log" && <UmDisplayLog />}
 
       {view === "reporting" && <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
         <h2 className="font-semibold text-white">Reporting period</h2>
@@ -130,7 +121,7 @@ export default function UmWorkspace({ view }: { view: View }) {
           <label className="flex flex-col gap-2 text-sm text-slate-400">To date<input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 p-3 text-slate-200 focus:outline-2 focus:outline-blue-500" /></label>
         </div>
         <button type="button" disabled className="mt-5 cursor-not-allowed rounded-lg bg-blue-600 px-4 py-3 text-sm text-white opacity-40">Export PDF</button>
-        <p className="mt-3 text-sm text-slate-400">Report export will be available when demo events are added.</p>
+        <p className="mt-3 text-sm text-slate-400">PDF export is not enabled in this demo.</p>
       </section>}
 
       {enlarged && <dialog ref={dialogRef} aria-label="UM demo video" onCancel={() => setEnlarged(false)} onClose={() => setEnlarged(false)}
