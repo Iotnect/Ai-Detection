@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Camera, Maximize2, X } from "lucide-react";
 import { umDemo } from "@/lib/um-demo";
 import { UmDisplayLog, UmEventLog, UmWaterLevel } from "./UmDemoData";
+import UmMap from "@/components/map/UmMap";
 
 type View = "dashboard" | "ai-detection" | "water-level" | "display-log" | "reporting";
 type Mode = "original" | "ai";
@@ -84,10 +85,7 @@ export default function UmWorkspace({ view }: { view: View }) {
             <Link href="/um/ai-detection" className="rounded-lg bg-blue-600 px-4 py-3 text-sm text-white transition hover:bg-blue-500 active:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">Open AI Detection</Link>
           </div>
         </section>
-        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-          <h2 className="font-semibold text-white">Monitoring location</h2>
-          <p className="py-12 text-center text-sm text-slate-400">UM location and map data have not been configured yet.</p>
-        </section>
+        <UmMap />
       </>}
 
       {view === "ai-detection" && <>

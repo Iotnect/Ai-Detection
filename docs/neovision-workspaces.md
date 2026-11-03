@@ -17,8 +17,10 @@ Its sidebar reuses the MBS layout with local pages at `/um`,
 Event Log, Water Level and Display Log share local illustrative readings based
 on the MBS format, labelled as sample data. These are not live UM measurements
 or a copy of MBS historical records. The dataset is in `src/lib/um-demo-data.ts`.
-Display Log supports local text search and status filtering. No UM map is
-configured yet.
+Display Log supports local text search and status filtering. The UM dashboard
+has a Leaflet map with a camera at user-supplied coordinates 3.118629,
+101.661867, near Q Bistro Universiti Malaya. Roads and building outlines are
+bundled OSM data, not satellite imagery or a university boundary.
 
 UM original and AI videos are configured in `src/lib/um-demo.ts`.
 See `public/um/README.md` for the file paths. Videos are not supplied yet.
