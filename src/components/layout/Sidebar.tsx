@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeft,
   Camera,
   FileText,
   LayoutDashboard,
@@ -132,8 +133,14 @@ export default function Sidebar({
       <nav className="flex-1 space-y-1 p-3">
         {neoVision && (
           <Link href="/" prefetch={false} onClick={onCloseMobile}
-            className="mb-3 flex min-h-11 items-center rounded-lg px-3 text-sm text-slate-400 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500">
-            {isCollapsed ? "Home" : "Back to projects"}
+            aria-label="Back to projects"
+            title="Back to projects"
+            className={cn(
+              "mb-3 flex min-h-11 items-center gap-3 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-medium text-slate-200 transition hover:border-blue-500 hover:bg-slate-700 active:bg-slate-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
+              isCollapsed && "lg:justify-center lg:px-2"
+            )}>
+            <ArrowLeft size={18} className="shrink-0" aria-hidden="true" />
+            <span className={cn(isCollapsed && "lg:hidden")}>Back to projects</span>
           </Link>
         )}
         {filteredMenu.map((item) => {
