@@ -6,9 +6,8 @@ export const umDemo = {
     latitude: 3.118629,
     longitude: 101.661867,
   },
-  // Set these to /um/original.mp4 and /um/ai.mp4 after adding the recordings.
   videos: {
-    original: "",
-    ai: "",
+    original: "/um/original.mp4",
+    ai: "/um/ai.mp4",
   },
 };

@@ -23,7 +23,7 @@ has a Leaflet map with a camera at user-supplied coordinates 3.118629,
 bundled OSM data, not satellite imagery or a university boundary.
 
 UM original and AI videos are configured in `src/lib/um-demo.ts`.
-See `public/um/README.md` for the file paths. Videos are not supplied yet.
+See `public/um/README.md` for the file paths. Original and AI recordings are included.
 PDF reporting remains disabled in the UM demo.
 
 Both workspaces provide a Back to projects link on NeoVision. Landing and
