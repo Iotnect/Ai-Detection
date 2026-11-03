@@ -56,7 +56,7 @@ export default function UmMap() {
       const palette = () => {
         const css = getComputedStyle(container.current!);
         const value = (name: string) => css.getPropertyValue(`--map-${name}`).trim();
-        return { main: value("main-road"), local: value("local-road"), highway: value("highway"), land: value("land"), surface: value("surface"), focus: value("focus"), online: value("online-border") };
+        return { main: value("main-road"), local: value("local-road"), highway: value("highway"), land: value("land"), surface: value("surface"), focus: value("focus") };
       };
       let colors = palette();
       const context = L.geoJSON<Properties>(data, {
@@ -76,13 +76,10 @@ export default function UmMap() {
         },
       }).addTo(map);
 
-      const onlineRing = L.circleMarker([camera.latitude, camera.longitude], {
-        radius: 34, color: colors.online, weight: 2, fill: false, interactive: false,
-      }).addTo(map);
       const icon = L.divIcon({
         className: styles.cameraMarker,
         html: '<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg><span>C1</span>',
-        iconSize: [46, 42], iconAnchor: [23, 21], tooltipAnchor: [0, -34],
+        iconSize: [46, 42], iconAnchor: [23, 42], tooltipAnchor: [0, -42],
       });
       const marker = L.marker([camera.latitude, camera.longitude], {
         icon, title: `${camera.code} - ${camera.name}`, keyboard: true, autoPanOnFocus: false, bubblingMouseEvents: false,
@@ -104,7 +101,7 @@ export default function UmMap() {
       map.on("keydown", event => {
         if (event.originalEvent.key === "Escape") setSelected(false);
       });
-      theme = new MutationObserver(() => { colors = palette(); context.setStyle(context.options.style!); onlineRing.setStyle({ color: colors.online }); });
+      theme = new MutationObserver(() => { colors = palette(); context.setStyle(context.options.style!); });
       theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
       resize = new ResizeObserver(() => map?.invalidateSize({ pan: false }));
       resize.observe(container.current);
