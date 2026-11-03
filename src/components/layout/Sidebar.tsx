@@ -110,7 +110,7 @@ export default function Sidebar({
             <div className="flex min-w-0 items-center gap-3">
               <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/neovision.png`}
                 alt="NeoVision Logo" width={40} height={40} priority className="shrink-0 object-contain" />
-              <div className="text-sm font-semibold text-white">UM<span className="block text-xs font-normal text-slate-400">NeoVision</span></div>
+              <div className="min-w-0 text-sm font-semibold leading-tight text-white">Universiti Malaya<span className="mt-1 block text-xs font-normal text-slate-400">NeoVision</span></div>
             </div>
           ) : <Logo />}
         </div>
