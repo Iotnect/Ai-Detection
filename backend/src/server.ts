@@ -10,11 +10,13 @@ import { detectionRoutes } from "./routes/detections.js";
 import { mediaMtxAuthRoutes } from "./routes/mediamtx-auth.js";
 import { streamRoutes } from "./routes/streams.js";
 import { createStreamRuntime } from "./stream/runtime.js";
+import { startDailyReports } from "./reports/service.js";
 
 const app = Fastify({
   logger: true,
 });
 const streamRuntime = createStreamRuntime(app.log);
+let stopDailyReports: () => Promise<void> = async () => {};
 
 await app.register(websocket);
 await app.register(helmet);
@@ -40,6 +42,7 @@ try {
     host: "0.0.0.0",
   });
   await streamRuntime.start();
+  stopDailyReports = startDailyReports(app.log);
 } catch (error) {
   app.log.error(error);
   process.exit(1);
@@ -47,6 +50,7 @@ try {
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, "shutting down");
+  await stopDailyReports();
   await streamRuntime.stop();
   await app.close();
   process.exit(0);
