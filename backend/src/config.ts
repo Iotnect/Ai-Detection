@@ -6,6 +6,8 @@ const ConfigSchema = z.object({
   FRONTEND_ORIGINS: z.string().default("http://localhost:3000"),
   AI_SERVICE_SECRET: z.string().min(16),
   DASHBOARD_WS_SECRET: z.string().min(16),
+  UM_SERVICE_SECRET: z.string().min(32).optional(),
+  UM_DEVICE_ID: z.string().min(1).max(100).default("um-flood-edge-01"),
   DETECTION_PERSIST_INTERVAL_MS: z.coerce
     .number()
     .int()
@@ -136,6 +138,8 @@ export const config = {
   frontendOrigins: values.FRONTEND_ORIGINS.split(",").map((value) => value.trim()),
   aiServiceSecret: values.AI_SERVICE_SECRET,
   dashboardWebSocketSecret: values.DASHBOARD_WS_SECRET,
+  umServiceSecret: values.UM_SERVICE_SECRET,
+  umDeviceId: values.UM_DEVICE_ID,
   detectionPersistIntervalMs: values.DETECTION_PERSIST_INTERVAL_MS,
   detectionLiveWindowMs: values.DETECTION_LIVE_WINDOW_MS,
   supabase,

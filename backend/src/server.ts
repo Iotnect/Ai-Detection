@@ -11,6 +11,9 @@ import { mediaMtxAuthRoutes } from "./routes/mediamtx-auth.js";
 import { streamRoutes } from "./routes/streams.js";
 import { createStreamRuntime } from "./stream/runtime.js";
 import { startDailyReports } from "./reports/service.js";
+import { umEventRoutes } from "./routes/um-events.js";
+import { SupabaseUmEventStore } from "./db/um-event-store.js";
+import { getSupabaseAdmin } from "./db/supabase.js";
 
 const app = Fastify({
   logger: true,
@@ -26,6 +29,9 @@ await app.register(cors, {
 });
 
 await app.register(detectionRoutes, { prefix: "/api/v1" });
+const umDatabase = getSupabaseAdmin();
+await app.register(umEventRoutes, { prefix: "/api/v1", secret: config.umServiceSecret,
+  deviceId: config.umDeviceId, store: umDatabase ? new SupabaseUmEventStore(umDatabase) : undefined });
 await app.register(streamRoutes, { prefix: "/api/v1" });
 await app.register(mediaMtxAuthRoutes, { prefix: "/internal/mediamtx" });
 

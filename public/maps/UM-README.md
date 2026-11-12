@@ -16,5 +16,5 @@ if needed. The browser loads the resulting GeoJSON locally. It does not query
 external tile servers or mapping APIs.
 
 The map uses the same theme palette as the MBS map. Camera details show the
-latest local UM demo reading. The UI uses neutral workspace labels. No live
+latest stored UM inference reading. No live
 camera connectivity is inferred from the marker.

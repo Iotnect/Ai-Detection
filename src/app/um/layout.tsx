@@ -4,6 +4,7 @@ import Link from "next/link";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useHostname } from "@/hooks/useHostname";
 import { isNeoVisionHost } from "@/lib/workspace";
+import { UmDataProvider } from "@/components/um/UmDataProvider";
 
 export default function UmLayout({ children }: { children: React.ReactNode }) {
   const hostname = useHostname();
@@ -15,5 +16,5 @@ export default function UmLayout({ children }: { children: React.ReactNode }) {
       <Link href="/" className="rounded-lg bg-blue-600 px-5 py-3 text-white focus-visible:outline-2 focus-visible:outline-blue-400">Back to dashboard</Link>
     </main>
   );
-  return <DashboardShell demo>{children}</DashboardShell>;
+  return <UmDataProvider><DashboardShell demo>{children}</DashboardShell></UmDataProvider>;
 }

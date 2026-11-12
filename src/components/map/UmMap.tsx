@@ -6,16 +6,17 @@ import { Camera, LocateFixed, MapPin, RotateCcw, X } from "lucide-react";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import { umDemo } from "@/lib/um-demo";
-import { demoStatusClass, formatDemoTime, umDemoEvents } from "@/lib/um-demo-data";
+import { umStatusClass, formatUmTime } from "@/lib/um-events";
+import { useUmData } from "@/components/um/UmDataProvider";
 import "leaflet/dist/leaflet.css";
 import styles from "./NilaiMap.module.css";
 
 type Properties = { name: string; highway: string; building: string; waterway: string; natural: string };
 const camera = umDemo.cameraLocation;
-const latestReading = umDemoEvents.at(-1)!;
 const coverage: [[number, number], [number, number]] = [[3.112629, 101.655867], [3.124629, 101.667867]];
 
 export default function UmMap() {
+  const { latest: latestReading } = useUmData();
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -149,8 +150,8 @@ export default function UmMap() {
           <div className="flex items-start justify-between gap-2"><div><h3 className="font-semibold text-white">{camera.code}</h3><p className="mt-1 text-sm text-slate-300">{camera.name}</p></div>
             <button type="button" onClick={closeDetails} aria-label="Close UM camera details" className="rounded-lg p-3 text-slate-400 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500"><X size={17} /></button></div>
           <p className="mt-2 font-mono text-xs text-slate-400">{camera.latitude.toFixed(6)}, {camera.longitude.toFixed(6)}</p>
-          <div className="mt-4 border-t border-slate-700 pt-3"><p className="text-sm text-slate-300">Water level: <strong className={demoStatusClass(latestReading.status)}>{latestReading.status}</strong></p>
-            <p className="mt-2 text-xs text-slate-400">Water Y: {latestReading.smoothed_y}<br />{formatDemoTime(latestReading.timestamp)}</p></div>
+          <div className="mt-4 border-t border-slate-700 pt-3"><p className="text-sm text-slate-300">Water level: <strong className={umStatusClass(latestReading?.status)}>{latestReading?.status ?? "No reading available"}</strong></p>
+            {latestReading && <p className="mt-2 text-xs text-slate-400">Water Y: {latestReading.waterline_y_px}<br />{formatUmTime(latestReading.timestamp)} (MYT)</p>}</div>
           <Link href="/um/ai-detection" className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-4 text-sm text-white hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-blue-400">Open AI Detection</Link>
         </div>}
         {state !== "ready" && <div role="status" className="absolute inset-0 z-[500] flex flex-col items-center justify-center gap-4 bg-slate-950 p-5 text-center text-sm text-slate-400">
