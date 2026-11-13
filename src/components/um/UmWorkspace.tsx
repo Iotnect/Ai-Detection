@@ -30,13 +30,13 @@ function DemoVideo({ mode }: { mode: Mode }) {
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center text-[#cbd5e1]">
           <Camera size={28} aria-hidden="true" />
-          <p className="text-sm">{failed ? "Video is unavailable." : `${mode === "ai" ? "AI" : "Original"} video has not been added yet.`}</p>
+          <p className="text-sm">{failed ? "Video is unavailable." : `Waiting for UM ${mode === "ai" ? "AI" : "original"} live feed.`}</p>
         </div>
       )}
-      <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
+      {src && !failed && <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
         <span aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-400" />
         {mode === "ai" ? "AI DEMO REPLAY" : "DEMO REPLAY"}
-      </span>
+      </span>}
     </div>
   );
 }
