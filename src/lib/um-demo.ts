@@ -7,7 +7,7 @@ export const umDemo = {
     longitude: 101.661867,
   },
   videos: {
-    original: "",
-    ai: "",
+    original: "/um/original.mp4",
+    ai: "/um/ai.mp4",
   },
 };
