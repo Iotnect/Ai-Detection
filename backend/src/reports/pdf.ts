@@ -14,7 +14,7 @@ export async function createDailyReport(date: string, readings: ReportReading[],
     timeZone: "Asia/Kuala_Lumpur", hour: "2-digit", hourCycle: "h23",
   })));
   const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true,
-    info: { Title: `MBS Daily Flood Alert Report - ${date}`, Author: "NeoVision" } });
+    info: { Title: `MBS Daily CCTV Alert Report - ${date}`, Author: "NeoVision" } });
   const chunks: Buffer[] = [];
   const output = new Promise<Buffer>((resolve, reject) => {
     doc.on("data", chunk => chunks.push(chunk));
@@ -24,7 +24,7 @@ export async function createDailyReport(date: string, readings: ReportReading[],
   doc.image(logo, doc.page.width / 2 - 28, 26, { fit: [56, 56], align: "center" });
   doc.y = 92;
   doc.font("Helvetica-Bold").fontSize(14).fillColor("#0f172a").text("MAJLIS BANDARAYA SEREMBAN", { align: "center" });
-  doc.moveDown(0.5).fontSize(18).fillColor("#2563eb").text("DAILY FLOOD ALERT REPORT", { align: "center" });
+  doc.moveDown(0.5).fontSize(18).fillColor("#2563eb").text("DAILY CCTV ALERT REPORT", { align: "center" });
   doc.moveDown(0.5).font("Helvetica").fontSize(10).fillColor("#475569")
     .text(`${date} | 00:00 - 23:59 Malaysia time (UTC+08:00)`, { align: "center" });
   doc.moveDown(1.5).fontSize(10).text(`Generated: ${time(new Date().toISOString())} (MYT)`);

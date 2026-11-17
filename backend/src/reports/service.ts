@@ -58,7 +58,7 @@ export async function runDailyReport(date: string, logger: AppLogger, send = fal
       try {
         const info = await transport.sendMail({
           from: settings.REPORT_FROM, to: recipient,
-          subject: `MBS Daily Flood Alert Report - ${date}`,
+          subject: `MBS Daily CCTV Alert Report - ${date}`,
           text: `Attached is the MBS report for ${date}, 00:00-23:59 Malaysia time.\n\nStored inference readings: ${readings.length}.\nThe PDF includes camera connectivity, observed offline/recovery times and downtime.\n${readings.length ? "RISING and DANGER events and data coverage information are included." : "No inference data was received. Water conditions cannot be confirmed."}`,
           attachments: [{ filename: fileName, content: pdf, contentType: "application/pdf" }],
         });
