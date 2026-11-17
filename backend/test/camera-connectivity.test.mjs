@@ -2,13 +2,38 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { summarizeConnectivity } from "../dist/reports/connectivity.js";
+import { summarizeConnectivity, applyReportingCorrection } from "../dist/reports/connectivity.js";
 import { DssCameraSynchronizer } from "../dist/dss/camera-sync.js";
 
 const camera = { id: "camera-1", code: "MBS-KDN-C1", name: "MBS-KDN-C1", location: "River" };
 const sample = (at, status, since = at) => ({ camera_id: camera.id,
   checked_at: `2026-11-17T${at}+08:00`, status,
   status_since_at: `2026-11-17T${since}+08:00`, check_interval_ms: 60_000 });
+
+test("17 November reporting correction is restricted to MBS and preserves C5 recovery", () => {
+  const c5 = { ...camera, id: "camera-5", code: "dss-channel-5", name: "MBS-KDN-C5 Hadapan Klinik Kesih" };
+  const original = [summarizeConnectivity("2026-11-17", camera, []), summarizeConnectivity("2026-11-17", c5, [])];
+  const clientId = "449887e5-019b-46f7-92e5-6d05ae81ea1c";
+  const corrected = applyReportingCorrection("2026-11-17", clientId, original, []);
+  assert.equal(corrected[0].downtimeMs, 0);
+  assert.equal(corrected[0].unverifiedMs, 0);
+  assert.equal(corrected[0].endStatus, "online");
+  assert.equal(corrected[1].downtimeMs, 86_400_000);
+  assert.equal(corrected[1].outages[0].offlineAt, "2026-11-16T16:00:00.000Z");
+  assert.equal(corrected[1].endStatus, "offline");
+  const recovery = { ...sample("15:00:00", "online"), camera_id: c5.id };
+  const recovered = applyReportingCorrection("2026-11-17", clientId, original, [recovery]);
+  assert.equal(recovered[1].downtimeMs, 15 * 3_600_000);
+  assert.equal(recovered[1].outages[0].onlineAt, recovery.checked_at);
+  assert.equal(recovered[1].endStatus, "online");
+  const lateRecovery = { ...sample("20:00:00", "online"), camera_id: c5.id };
+  const late = applyReportingCorrection("2026-11-17", clientId, original, [lateRecovery]);
+  assert.equal(late[1].downtimeMs, 20 * 3_600_000);
+  assert.equal(applyReportingCorrection("2026-11-18", clientId, original, []), original);
+  assert.equal(applyReportingCorrection("2026-11-16", clientId, original, []), original);
+  assert.equal(applyReportingCorrection("2026-11-17", "another-client", original, []), original);
+  assert.equal(original[0].endStatus, "unverified");
+});
 
 test("downtime accumulates across offline checks and is retained after recovery", () => {
   const result = summarizeConnectivity("2026-11-17", camera, [

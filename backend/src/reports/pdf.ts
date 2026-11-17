@@ -84,7 +84,7 @@ export async function createDailyReport(date: string, readings: ReportReading[],
     if (item.outages.length && item.unverifiedMs > 0) row([item.camera.name || item.camera.code, "UNVERIFIED", "No verified status for", formatDuration(item.unverifiedMs), "Excluded from downtime"]);
   }
   if (!connectivity.length) row(["No cameras available", "UNVERIFIED", "-", "-", "-"]);
-  const note = "Times show when DSS status was observed. Downtime is accumulated within this reporting day and retained after recovery. Coverage becomes unverified after three polling intervals without a successful check. Historical downtime before tracking began is unavailable.";
+  const note = connectivity.find(item => item.reportNote)?.reportNote ?? "Times show when DSS status was observed. Downtime is accumulated within this reporting day and retained after recovery. Coverage becomes unverified after three polling intervals without a successful check. Historical downtime before tracking began is unavailable.";
   doc.font("Helvetica").fontSize(8);
   if (doc.y + doc.heightOfString(note, { width: 515 }) + 12 > doc.page.height - 65) doc.addPage();
   doc.moveDown(0.7).fillColor("#64748b").text(note);

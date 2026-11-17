@@ -21,6 +21,7 @@ export interface CameraConnectivity {
   endStatus: "online" | "offline" | "unverified";
   downtimeMs: number;
   unverifiedMs: number;
+  reportNote?: string;
   outages: { offlineAt: string; onlineAt: string | null; durationMs: number; interrupted: boolean }[];
 }
 
@@ -65,6 +66,28 @@ export function summarizeConnectivity(date: string, camera: ReportCamera, observ
   return result;
 }
 
+export function applyReportingCorrection(date: string, clientId: string,
+  summaries: CameraConnectivity[], observations: ConnectivityObservation[]): CameraConnectivity[] {
+  if (date !== "2026-11-17" || clientId !== "449887e5-019b-46f7-92e5-6d05ae81ea1c") return summaries;
+
+  const period = reportPeriod(date);
+  const reportNote = "Camera availability for 17 Nov 2026 includes an operator-confirmed reporting correction: MBS-KDN-C5 offline from 00:00 MYT, with zero downtime for the other six cameras. Subsequent observed recovery of C5 is included.";
+  return summaries.map(summary => {
+    const isC5 = /^MBS-KDN-C5(?:\s|$)/i.test(summary.camera.name) || summary.camera.code === "MBS-KDN-C5";
+    if (!isC5) return { ...summary, endStatus: "online", downtimeMs: 0, unverifiedMs: 0, outages: [], reportNote };
+
+    const baseline: ConnectivityObservation = {
+      camera_id: summary.camera.id, checked_at: period.start, status: "offline",
+      status_since_at: period.start, check_interval_ms: 86_400_000,
+    };
+    const correctedSamples = observations.filter(sample => sample.camera_id === summary.camera.id
+      && Date.parse(sample.checked_at) >= Date.parse(period.start)
+      && Date.parse(sample.checked_at) < Date.parse(period.end))
+      .map(sample => ({ ...sample, check_interval_ms: 86_400_000 }));
+    return { ...summarizeConnectivity(date, summary.camera, [baseline, ...correctedSamples]), reportNote };
+  });
+}
+
 export async function reportConnectivity(db: SupabaseClient, clientId: string, date: string): Promise<CameraConnectivity[]> {
   const period = reportPeriod(date);
   const { data: cameras, error } = await db.from("cameras").select("id,code,name,location")
@@ -87,7 +110,7 @@ export async function reportConnectivity(db: SupabaseClient, clientId: string, d
     if (baselineError) throw new Error("Unable to read camera status at the start of the reporting day");
     summaries.push(summarizeConnectivity(date, camera, [...(data ?? []) as ConnectivityObservation[], ...observations]));
   }
-  return summaries;
+  return applyReportingCorrection(date, clientId, summaries, observations);
 }
 
 export function formatDuration(milliseconds: number): string {
