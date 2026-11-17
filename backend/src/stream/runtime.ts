@@ -54,7 +54,7 @@ export function createStreamRuntime(logger: AppLogger): StreamRuntime {
         logger,
       )
     : undefined;
-  const inventoryStore = createCameraInventoryStore();
+  const inventoryStore = createCameraInventoryStore(config.dss?.cameraStatusIntervalMs);
   const cameraSynchronizer = inventoryStore
     ? new DssCameraSynchronizer(
         client,

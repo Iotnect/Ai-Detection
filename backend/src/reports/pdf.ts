@@ -1,13 +1,14 @@
 import PDFDocument from "pdfkit";
 import { fileURLToPath } from "node:url";
 import type { ReportReading } from "./data.js";
+import { formatDuration, type CameraConnectivity } from "./connectivity.js";
 
 const logo = fileURLToPath(new URL("../../assets/mbs-logo.png", import.meta.url));
 const time = (value: string) => new Date(value).toLocaleString("en-MY", {
   timeZone: "Asia/Kuala_Lumpur", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true,
 });
 
-export async function createDailyReport(date: string, readings: ReportReading[]): Promise<Buffer> {
+export async function createDailyReport(date: string, readings: ReportReading[], connectivity: CameraConnectivity[] = []): Promise<Buffer> {
   const alerts = readings.filter(row => ["RISING", "DANGER"].includes(row.status.toUpperCase()));
   const hours = new Set(readings.map(row => new Date(row.occurred_at).toLocaleString("en-GB", {
     timeZone: "Asia/Kuala_Lumpur", hour: "2-digit", hourCycle: "h23",
@@ -36,15 +37,14 @@ export async function createDailyReport(date: string, readings: ReportReading[])
   doc.moveDown(0.8).fillColor(readings.length ? "#475569" : "#b45309").text(readings.length
     ? "This report lists RISING and DANGER events from stored inference readings. Gaps in recordings do not confirm safe conditions or continuous monitoring."
     : "NO INFERENCE DATA RECEIVED for this reporting day. Water conditions and monitoring availability cannot be confirmed. This is not an all-clear report.");
-  doc.moveDown(1).font("Helvetica-Bold").fillColor("#0f172a").text("RISING AND DANGER EVENTS");
-  doc.moveDown(0.7);
-  const widths = [84, 78, 55, 40, 258];
+  let widths = [84, 78, 55, 40, 258];
+  let headings = ["Date / time (MYT)", "Camera", "Status", "Water Y", "Location / Message"];
   const row = (values: string[], header = false, status = "") => {
     const cellHeight = Math.max(...values.map((text, i) => doc.font(header ? "Helvetica-Bold" : "Helvetica").fontSize(8).heightOfString(text, { width: widths[i]! - 12 }))) + 14;
     if (doc.y + cellHeight > doc.page.height - 65) {
       doc.addPage();
       doc.y = 40;
-      if (!header) row(["Date / time (MYT)", "Camera", "Status", "Water Y", "Location / Message"], true);
+      if (!header) row(headings, true);
     }
     const y = doc.y;
     let x = 40;
@@ -59,7 +59,39 @@ export async function createDailyReport(date: string, readings: ReportReading[])
     doc.y = y + cellHeight;
     doc.x = 40;
   };
-  row(["Date / time (MYT)", "Camera", "Status", "Water Y", "Location / Message"], true);
+  const section = (title: string) => {
+    if (doc.y > doc.page.height - 170) doc.addPage();
+    doc.moveDown(1).font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(title);
+    doc.moveDown(0.7);
+  };
+  section("CAMERA CONNECTIVITY AND DOWNTIME");
+  widths = [120, 68, 110, 110, 107];
+  headings = ["Camera / location", "Day-end status", "Offline observed (MYT)", "Online again (MYT)", "Downtime in this day"];
+  row(headings, true);
+  for (const item of connectivity) {
+    const camera = `${item.camera.name || item.camera.code}\n${item.camera.location ?? ""}`;
+    if (!item.outages.length) {
+      const duration = item.unverifiedMs === 86_400_000 ? "Unverified" : formatDuration(0);
+      row([camera, item.endStatus.toUpperCase(), "-", "-", item.unverifiedMs > 0
+        ? `${duration}\nUnverified: ${formatDuration(item.unverifiedMs)}` : duration]);
+    }
+    for (const outage of item.outages) {
+      row([camera, item.endStatus.toUpperCase(), time(outage.offlineAt),
+        outage.onlineAt ? time(outage.onlineAt) : outage.interrupted ? "Unverified after last check" : "Still offline at day end",
+        formatDuration(outage.durationMs)]);
+    }
+    if (item.outages.length > 1) row([item.camera.name || item.camera.code, "TOTAL", "-", "-", formatDuration(item.downtimeMs)]);
+    if (item.outages.length && item.unverifiedMs > 0) row([item.camera.name || item.camera.code, "UNVERIFIED", "No verified status for", formatDuration(item.unverifiedMs), "Excluded from downtime"]);
+  }
+  if (!connectivity.length) row(["No cameras available", "UNVERIFIED", "-", "-", "-"]);
+  const note = "Times show when DSS status was observed. Downtime is accumulated within this reporting day and retained after recovery. Coverage becomes unverified after three polling intervals without a successful check. Historical downtime before tracking began is unavailable.";
+  doc.font("Helvetica").fontSize(8);
+  if (doc.y + doc.heightOfString(note, { width: 515 }) + 12 > doc.page.height - 65) doc.addPage();
+  doc.moveDown(0.7).fillColor("#64748b").text(note);
+  section("RISING AND DANGER EVENTS");
+  widths = [84, 78, 55, 40, 258];
+  headings = ["Date / time (MYT)", "Camera", "Status", "Water Y", "Location / Message"];
+  row(headings, true);
   if (!alerts.length) row(["-", "-", readings.length ? "NO ALERTS" : "NO DATA", "-", readings.length
     ? "No RISING or DANGER events recorded in the available readings."
     : "No inference readings were available for this day."]);

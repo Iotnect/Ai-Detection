@@ -14,6 +14,8 @@ interface CameraRow {
   status: "online" | "offline" | "reconnecting" | "error";
   last_seen_at: string | null;
   live_stream_enabled: boolean;
+  status_checked_at?: string;
+  status_check_interval_ms?: number;
 }
 
 export interface CameraInventoryStore {
@@ -38,7 +40,7 @@ function chunk<T>(values: T[], size: number): T[][] {
 }
 
 class SupabaseCameraInventoryStore implements CameraInventoryStore {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: SupabaseClient, private readonly intervalMs: number) {}
 
   async sync(cameras: DssCamera[], monitoringChannelId: string): Promise<number> {
     const { data: monitoringCamera, error: monitoringCameraError } = await this.client
@@ -90,6 +92,8 @@ class SupabaseCameraInventoryStore implements CameraInventoryStore {
         stream_path: existing?.stream_path ?? `status-${clientPrefix}-${slug}`,
         location: existing?.location ?? null,
         status: camera.online ? "online" : "offline",
+        status_checked_at: now,
+        status_check_interval_ms: this.intervalMs,
         last_seen_at: camera.online ? now : (existing?.last_seen_at ?? null),
         live_stream_enabled: isMonitoringCamera,
       };
@@ -111,7 +115,7 @@ class SupabaseCameraInventoryStore implements CameraInventoryStore {
   }
 }
 
-export function createCameraInventoryStore(): CameraInventoryStore | undefined {
+export function createCameraInventoryStore(intervalMs = 60_000): CameraInventoryStore | undefined {
   const client = getSupabaseAdmin();
-  return client ? new SupabaseCameraInventoryStore(client) : undefined;
+  return client ? new SupabaseCameraInventoryStore(client, intervalMs) : undefined;
 }

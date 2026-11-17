@@ -100,7 +100,7 @@ export class DssCameraSynchronizer {
       online: statusByChannel.get(camera.channelId) ?? camera.online,
     }));
     const synchronized = await this.store.sync(
-      this.cameras,
+      this.cameras.filter(camera => statusByChannel.has(camera.channelId)),
       this.monitoringChannelId,
     );
 

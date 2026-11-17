@@ -12,11 +12,22 @@ only RISING/DANGER alerts. Normal readings contribute to coverage statistics.
 The query is paginated. A database error stops the send; an empty successful query
 produces an explicit NO DATA report. Demo replay is never queried or stored.
 
+The PDF also lists every camera's day-end connectivity, observed offline and
+recovery times, and accumulated downtime within the reporting day. Successful
+DSS checks are stored in `camera_connectivity_observations`. Repeated offline
+checks extend an outage and recovery retains its accumulated downtime. The
+calculation clips overnight outages to each reporting day. After three polling
+intervals without a successful check, coverage is unverified until a new check.
+Earlier downtime cannot be reconstructed from the latest camera status alone.
+
 ## Setup
 
 1. Keep `REPORT_ENABLED=false` while configuring/testing.
 2. Apply `supabase/migrations/202611100001_daily_report_deliveries.sql` in the
    Supabase SQL Editor. This creates the private delivery ledger and claim RPC.
+   Also apply `202611170001_camera_connectivity.sql` and then
+   `202611170002_ignore_stale_camera_checks.sql` from the same migration directory
+   before deploying. These record verified checks atomically with camera updates.
 3. Deploy this backend version using `backend/Dockerfile`. It includes the PNG
    logo asset, PDFKit, Nodemailer and the daily-report command.
 4. Set Railway backend Variables (keep real passwords only in Railway):

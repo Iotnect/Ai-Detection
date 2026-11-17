@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import type { AppLogger } from "../logging.js";
 import { reportClient, reportReadings } from "./data.js";
 import { createDailyReport } from "./pdf.js";
+import { reportConnectivity } from "./connectivity.js";
 import { reportSettings } from "./settings.js";
 import { dailyReportDue, previousReportDate, reportPeriod } from "./period.js";
 
@@ -22,7 +23,8 @@ export async function runDailyReport(date: string, logger: AppLogger, send = fal
   });
   const clientId = await reportClient(db, settings.REPORT_CAMERA_CODE, settings.REPORT_CLIENT_ID);
   const readings = await reportReadings(db, clientId, date);
-  const pdf = await createDailyReport(date, readings);
+  const connectivity = await reportConnectivity(db, clientId, date);
+  const pdf = await createDailyReport(date, readings, connectivity);
   const fileName = `mbs-daily-report-${date}.pdf`;
   if (!send) return { pdf, fileName, retryNeeded: false, failedCount: 0 };
   let retryNeeded = false;
@@ -57,7 +59,7 @@ export async function runDailyReport(date: string, logger: AppLogger, send = fal
         const info = await transport.sendMail({
           from: settings.REPORT_FROM, to: recipient,
           subject: `MBS Daily Flood Alert Report - ${date}`,
-          text: `Attached is the MBS report for ${date}, 00:00-23:59 Malaysia time.\n\nStored inference readings: ${readings.length}.\n${readings.length ? "The PDF includes RISING and DANGER events and data coverage information." : "No inference data was received. Water conditions cannot be confirmed."}`,
+          text: `Attached is the MBS report for ${date}, 00:00-23:59 Malaysia time.\n\nStored inference readings: ${readings.length}.\nThe PDF includes camera connectivity, observed offline/recovery times and downtime.\n${readings.length ? "RISING and DANGER events and data coverage information are included." : "No inference data was received. Water conditions cannot be confirmed."}`,
           attachments: [{ filename: fileName, content: pdf, contentType: "application/pdf" }],
         });
         accepted = info.accepted.length > 0;

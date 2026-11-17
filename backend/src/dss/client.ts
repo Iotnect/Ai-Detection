@@ -320,7 +320,7 @@ export class DssClient {
         for (const channel of unit.channels ?? []) {
           const channelId = channel.channelCode;
 
-          if (!channelId) continue;
+          if (!channelId || !["0", "1"].includes(String(channel.status))) continue;
 
           cameras.set(channelId, {
             channelId,
@@ -360,7 +360,7 @@ export class DssClient {
 
     for (const result of results) {
       for (const channel of result.channels ?? []) {
-        if (!channel.channelId) continue;
+        if (!channel.channelId || !["0", "1"].includes(String(channel.status))) continue;
 
         statuses.set(channel.channelId, {
           channelId: channel.channelId,
