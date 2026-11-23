@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { isMapStream } from "../stream/map-path.js";
 import { config } from "../config.js";
 import { verifyStreamTicket } from "../auth/stream-ticket.js";
 import { getSupabaseAdmin } from "../db/supabase.js";
@@ -34,7 +35,7 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth", async (request, reply) => {
     const parsed = AuthRequestSchema.safeParse(request.body);
 
-    if (!parsed.success || !readablePaths.has(parsed.data.path)) {
+    if (!parsed.success || (!readablePaths.has(parsed.data.path) && !isMapStream(parsed.data.path))) {
       return reply.code(401).send();
     }
 
@@ -49,7 +50,7 @@ export async function mediaMtxAuthRoutes(app: FastifyInstance): Promise<void> {
 
     if (
       input.action === "publish" &&
-      input.path === ORIGINAL_STREAM_PATH &&
+      (input.path === ORIGINAL_STREAM_PATH || isMapStream(input.path)) &&
       valueMatches(input.user, auth.publishUser) &&
       valueMatches(input.password, auth.publishPassword)
     ) {

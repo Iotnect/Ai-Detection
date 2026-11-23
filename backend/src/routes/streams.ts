@@ -1,4 +1,6 @@
 import type { FastifyInstance } from "fastify";
+import type { StreamRuntime } from "../stream/runtime.js";
+import { isMapStream } from "../stream/map-path.js";
 import { Readable } from "node:stream";
 import { z } from "zod";
 
@@ -26,7 +28,7 @@ function cameraPathForStream(streamPath: string): string | undefined {
     return ORIGINAL_STREAM_PATH;
   }
 
-  return undefined;
+  return isMapStream(streamPath) ? streamPath : undefined;
 }
 
 function appendTicket(uri: string, ticket: string): string {
@@ -52,7 +54,7 @@ export function rewriteHlsManifest(manifest: string, ticket: string): string {
     .join("");
 }
 
-export async function streamRoutes(app: FastifyInstance): Promise<void> {
+export async function streamRoutes(app: FastifyInstance, options: { runtime: StreamRuntime }): Promise<void> {
   app.post(
     "/ws-ticket",
     { preHandler: requireDashboardAuthentication },
@@ -91,7 +93,7 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
 
       const { data: camera } = await supabase
         .from("cameras")
-        .select("id")
+        .select("id,dss_channel_id,status,name,code")
         .eq("client_id", clientId)
         .eq("stream_path", cameraPath)
         .maybeSingle();
@@ -100,6 +102,15 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(403).send({ error: "stream_forbidden" });
       }
 
+      if (isMapStream(cameraPath)) {
+        const mbsCamera = /^MBS-KDN-C[2-7](?:\s|$)/i;
+        if (!camera.dss_channel_id || !(mbsCamera.test(camera.name) || mbsCamera.test(camera.code))) {
+          return reply.code(403).send({ error: "stream_forbidden" });
+        }
+        if (camera.status !== "online" || !await options.runtime.requestCamera(cameraPath, camera.dss_channel_id)) {
+          return reply.code(503).send({ error: "camera_unavailable" });
+        }
+      }
       return createStreamTicket(clientId, parsed.data.path);
     },
   );
@@ -121,6 +132,7 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: "invalid_stream_ticket" });
     }
 
+    options.runtime.touchCamera(streamPath);
     requestUrl.searchParams.delete("ticket");
 
     const upstreamUrl = new URL(

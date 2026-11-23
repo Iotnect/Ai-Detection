@@ -9,6 +9,7 @@ import type { LiveDetection } from "@/hooks/useDetectionStream";
 import { findMapFloodDetection, mapFloodStatus } from "@/lib/map-flood-status";
 import { cameraLocations, type MapCameraCode } from "@/lib/camera-locations";
 import { cameraConnectivityMessage, findMapCameraStatus } from "@/lib/map-camera-status";
+import HlsPlayer from "@/components/cctv/HlsPlayer";
 import MapAttribution from "./MapAttribution";
 import "leaflet/dist/leaflet.css";
 import styles from "./NilaiMap.module.css";
@@ -233,6 +234,12 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError, dete
             </div>
             <p className="mt-3 text-sm text-slate-200">Connectivity: <strong className={`rounded-full px-2 py-1 text-xs uppercase ${selectedStatusStyle}`}>{statusLabel(selectedStatus)}</strong></p>
             {statusesError ? <p className="mt-1 text-xs text-amber-400">The latest connectivity check failed. Use Refresh to try again.</p> : selectedStatus ? <p className="mt-2 text-xs leading-5 text-slate-300">{cameraConnectivityMessage(selectedStatus)}</p> : <p className="mt-2 text-xs text-slate-400">{statusesLoading ? "Checking camera connectivity..." : "No matching connectivity record found."}</p>}
+            {selectedStatus?.status === "online" && !statusesError && selectedStatus.stream_path && (
+              <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black">
+                <HlsPlayer key={selectedStatus.id} src={new URL("/" + selectedStatus.stream_path, window.location.origin).href}
+                  className="h-full w-full object-contain" ariaLabel={selectedLocation.code + " live footage"} />
+              </div>
+            )}
             <p className="mt-2 font-mono text-xs text-slate-400">{selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}</p>
             <p className="mt-2 text-xs text-slate-500">Connectivity updates every 30 seconds.</p>
             <div className="mt-3 border-t border-slate-700 pt-3">

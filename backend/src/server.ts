@@ -32,7 +32,7 @@ await app.register(detectionRoutes, { prefix: "/api/v1" });
 const umDatabase = getSupabaseAdmin();
 await app.register(umEventRoutes, { prefix: "/api/v1", secret: config.umServiceSecret,
   deviceId: config.umDeviceId, store: umDatabase ? new SupabaseUmEventStore(umDatabase) : undefined });
-await app.register(streamRoutes, { prefix: "/api/v1" });
+await app.register(streamRoutes, { runtime: streamRuntime, prefix: "/api/v1" });
 await app.register(mediaMtxAuthRoutes, { prefix: "/internal/mediamtx" });
 
 app.get("/health", async () => ({

@@ -16,6 +16,7 @@ export interface CameraStatusRecord {
   name: string;
   location: string | null;
   status: CameraConnectionStatus;
+  stream_path?: string;
   last_seen_at: string | null;
 }
 
@@ -34,7 +35,7 @@ export function useCameraStatuses() {
     try {
       const { data, error: queryError } = await supabase
         .from("cameras")
-        .select("id, code, name, location, status, last_seen_at")
+        .select("id, code, name, location, status, last_seen_at, stream_path")
         .order("name", { ascending: true });
 
       if (queryError) throw queryError;
