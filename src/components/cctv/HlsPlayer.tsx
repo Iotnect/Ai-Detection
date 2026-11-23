@@ -328,7 +328,7 @@ export default function HlsPlayer({
       />
       {(starting || failed) && !holdingFrame && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/95 px-6 text-center text-sm text-slate-400">
-          {starting ? "Connecting to live camera…" : "Live stream is temporarily unavailable. The player will reconnect after the relay recovers."}
+          {starting ? "Connecting to live camera..." : "Live stream is temporarily unavailable. The player will reconnect after the relay recovers."}
         </div>
       )}
     </div>
