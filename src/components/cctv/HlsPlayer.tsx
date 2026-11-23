@@ -11,6 +11,7 @@ interface HlsPlayerProps {
   className?: string;
   ariaLabel: string;
   targetLatencySeconds?: number;
+  onDemand?: boolean;
   onClick?: () => void;
   onUnavailable?: () => void;
   onAvailable?: () => void;
@@ -21,6 +22,7 @@ export default function HlsPlayer({
   className,
   ariaLabel,
   targetLatencySeconds,
+  onDemand = false,
   onClick,
   onUnavailable,
   onAvailable,
@@ -28,6 +30,7 @@ export default function HlsPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const frameRef = useRef<HTMLCanvasElement>(null);
   const [failed, setFailed] = useState(false);
+  const [starting, setStarting] = useState(onDemand);
   const [holdingFrame, setHoldingFrame] = useState(false);
 
   useEffect(() => {
@@ -36,6 +39,8 @@ export default function HlsPlayer({
 
     if (!video || !canvas) return;
     setFailed(false);
+    setStarting(onDemand);
+    const startupTimer = onDemand ? setTimeout(() => { setStarting(false); setFailed(true); }, 30_000) : undefined;
     const retainedFrame = holdVideoFrame(video, canvas, setHoldingFrame);
 
     let hls: Hls | undefined;
@@ -229,6 +234,8 @@ export default function HlsPlayer({
     };
 
     const handlePlaying = () => {
+      clearTimeout(startupTimer);
+      setStarting(false);
       clearTimeout(nativeRetryTimer);
       nativeRetryTimer = undefined;
       setFailed(false);
@@ -289,6 +296,7 @@ export default function HlsPlayer({
 
     return () => {
       cancelled = true;
+      clearTimeout(startupTimer);
       retainedFrame.dispose();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video.removeEventListener("play", resumeAtLiveEdge);
@@ -297,7 +305,7 @@ export default function HlsPlayer({
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
-  }, [src, targetLatencySeconds, onUnavailable, onAvailable]);
+  }, [src, targetLatencySeconds, onDemand, onUnavailable, onAvailable]);
 
   return (
     <div className="relative h-full w-full bg-black">
@@ -318,9 +326,9 @@ export default function HlsPlayer({
         className={`${className || "h-full w-full object-contain"} pointer-events-none absolute inset-0 bg-black`}
         style={{ visibility: holdingFrame ? "visible" : "hidden" }}
       />
-      {failed && !holdingFrame && (
+      {(starting || failed) && !holdingFrame && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/95 px-6 text-center text-sm text-slate-400">
-          Live stream is temporarily unavailable. The player will reconnect after the relay recovers.
+          {starting ? "Connecting to live camera…" : "Live stream is temporarily unavailable. The player will reconnect after the relay recovers."}
         </div>
       )}
     </div>

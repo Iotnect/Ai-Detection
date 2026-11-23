@@ -236,7 +236,7 @@ export default function NilaiMap({ cameras, statusesLoading, statusesError, dete
             {statusesError ? <p className="mt-1 text-xs text-amber-400">The latest connectivity check failed. Use Refresh to try again.</p> : selectedStatus ? <p className="mt-2 text-xs leading-5 text-slate-300">{cameraConnectivityMessage(selectedStatus)}</p> : <p className="mt-2 text-xs text-slate-400">{statusesLoading ? "Checking camera connectivity..." : "No matching connectivity record found."}</p>}
             {selectedStatus?.status === "online" && !statusesError && selectedStatus.stream_path && (
               <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black">
-                <HlsPlayer key={selectedStatus.id} src={new URL("/" + selectedStatus.stream_path, window.location.origin).href}
+                <HlsPlayer onDemand={selectedCode !== "MBS-KDN-C1"} key={selectedStatus.id} src={new URL("/" + selectedStatus.stream_path, window.location.origin).href}
                   className="h-full w-full object-contain" ariaLabel={selectedLocation.code + " live footage"} />
               </div>
             )}
