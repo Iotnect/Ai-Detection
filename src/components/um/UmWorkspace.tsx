@@ -16,15 +16,12 @@ const titles: Record<View, string> = {
   "display-log": "Display Log", reporting: "Reporting",
 };
 
-const umStreams: Record<Mode, string> = {
-  original: "https://um-flood-edge-01.taila3d0cf.ts.net/channel_0/index.m3u8",
-  ai: "https://um-flood-edge-01.taila3d0cf.ts.net/channel_1/index.m3u8",
-};
-
 function UmLiveVideo({ mode }: { mode: Mode }) {
+  const channel = mode === "ai" ? "channel_1" : "channel_0";
+  const src = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/um-stream/${channel}/index.m3u8`;
   return (
     <div className="aspect-video w-full bg-black">
-      <HlsPlayer key={mode} src={umStreams[mode]} direct onDemand
+      <HlsPlayer key={mode} src={src} direct onDemand
         className="h-full w-full object-contain"
         ariaLabel={mode === "ai" ? "UM AI live feed" : "UM Original live feed"} />
     </div>

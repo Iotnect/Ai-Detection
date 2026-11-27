@@ -10,4 +10,19 @@ const nextConfig: NextConfig = {
   trailingSlash: isStaticExport,
 };
 
+if (!isStaticExport) {
+  const upstream = "https://um-flood-edge-01.taila3d0cf.ts.net";
+  const channel = ":channel(channel_0|channel_1)";
+  nextConfig.rewrites = async () => [
+    {
+      source: `/um-stream/${channel}/index.m3u8`,
+      destination: `${upstream}/:channel/index.m3u8?cookieCheck=1`,
+    },
+    {
+      source: `/um-stream/${channel}/:file([a-zA-Z0-9_.-]+)`,
+      destination: `${upstream}/:channel/:file`,
+    },
+  ];
+}
+
 export default nextConfig;
