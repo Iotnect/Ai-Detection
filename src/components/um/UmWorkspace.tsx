@@ -22,6 +22,7 @@ function UmLiveVideo({ mode }: { mode: Mode }) {
   return (
     <div className="aspect-video w-full bg-black">
       <HlsPlayer key={mode} src={src} direct onDemand
+        targetLatencySeconds={10}
         className="h-full w-full object-contain"
         ariaLabel={mode === "ai" ? "UM AI live feed" : "UM Original live feed"} />
     </div>
