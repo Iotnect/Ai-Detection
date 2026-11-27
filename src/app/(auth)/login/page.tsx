@@ -21,12 +21,9 @@ export default function LoginPage() {
     setBrand(isUmHost(host) ? "um" : host.toLowerCase() === "mbs.iotnect.com" ? "mbs" : "neovision");
   }, []);
 
-  const logoSrc =
-    brand === "mbs"
-      ? `${basePath}/Majlis_Bandaraya_Seremban.svg`
-      : `${basePath}/neovision.png`;
-  const logoAlt =
-    brand === "mbs" ? "Majlis Bandaraya Seremban logo" : "NeoVision logo";
+  const logoSrc = `${basePath}/${brand === "mbs" ? "Majlis_Bandaraya_Seremban.svg" : brand === "um" ? "universiti-malaya.png" : "neovision.png"}`;
+  const logoAlt = brand === "mbs" ? "Majlis Bandaraya Seremban logo"
+    : brand === "um" ? "Universiti Malaya crest" : "NeoVision logo";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

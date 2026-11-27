@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { isPublicDemoRoute } from "@/lib/workspace";
+import { isPublicDemoRoute, isUmHost } from "@/lib/workspace";
 
 let authClient: (typeof import("@/lib/supabase"))["supabase"] | undefined;
 
@@ -42,6 +42,10 @@ function getDisplayName(email?: string, fullName?: string | null): string {
   return fullName || email || "User";
 }
 
+function canUseHost(metadata: Record<string, unknown>): boolean {
+  return isUmHost(window.location.hostname) === (metadata.workspace === "um");
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,8 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data } = await supabase.auth.getSession();
 
-      if (!data.session) {
-        if (active) setIsLoading(false);
+      if (!data.session || !canUseHost(data.session.user.app_metadata)) {
+        if (active) {
+          setUser(null);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -123,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error || !data.user) return null;
+      if (!canUseHost(data.user.app_metadata)) {
+        await supabase.auth.signOut({ scope: "local" });
+        return null;
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
