@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { UM_HOSTNAME } from "./src/lib/workspace";
 
 const isStaticExport = process.env.BUILD_STATIC_EXPORT === "true";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -11,6 +12,14 @@ const nextConfig: NextConfig = {
 };
 
 if (!isStaticExport) {
+  nextConfig.redirects = async () =>
+    ["/", "/:page(camera-status|ai-detection|cctv|water-level|display-log|reporting)"].map((source) => ({
+      source,
+      destination: "/um",
+      has: [{ type: "host", value: UM_HOSTNAME.replaceAll(".", "\\.") }],
+      permanent: false,
+    }));
+
   const upstream = "https://um-flood-edge-01.taila3d0cf.ts.net";
   const channel = ":channel(channel_0|channel_1)";
   nextConfig.rewrites = async () => [

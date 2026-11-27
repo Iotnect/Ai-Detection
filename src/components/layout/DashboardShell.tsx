@@ -10,9 +10,11 @@ import Topbar from "@/components/layout/Topbar";
 export default function DashboardShell({
   children,
   demo = false,
+  requireAuth = !demo,
 }: {
   children: React.ReactNode;
   demo?: boolean;
+  requireAuth?: boolean;
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -20,10 +22,10 @@ export default function DashboardShell({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!demo && !isLoading && !isAuthenticated) {
+    if (requireAuth && !isLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [demo, isAuthenticated, isLoading, router]);
+  }, [requireAuth, isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (!isMobileSidebarOpen) return;
@@ -36,7 +38,7 @@ export default function DashboardShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isMobileSidebarOpen]);
 
-  if (!demo && (isLoading || !isAuthenticated)) {
+  if (requireAuth && (isLoading || !isAuthenticated)) {
     return (
       <div className="min-h-screen bg-[#070b14] flex items-center justify-center">
         <p className="text-slate-400">Checking authentication...</p>

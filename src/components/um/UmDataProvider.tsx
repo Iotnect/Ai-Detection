@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { isUmReading, type UmReading } from "@/lib/um-events";
-import { isNeoVisionHost } from "@/lib/workspace";
+import { isNeoVisionHost, isUmHost } from "@/lib/workspace";
 
 interface UmData {
   events: UmReading[];
@@ -22,7 +22,8 @@ export function UmDataProvider({ children }: { children: ReactNode }) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    if (!isNeoVisionHost(window.location.hostname)) return;
+    const host = window.location.hostname;
+    if (!isNeoVisionHost(host) && !isUmHost(host)) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
     if (!apiUrl) { setError("UM data connection unavailable."); setLoading(false); return; }
     let stopped = false;

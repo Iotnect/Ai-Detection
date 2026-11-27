@@ -4,24 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { isNeoVisionHost } from "@/lib/workspace";
+import { isNeoVisionHost, isUmHost } from "@/lib/workspace";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [brand, setBrand] = useState<"mbs" | "neovision" | null>(null);
+  const [brand, setBrand] = useState<"mbs" | "um" | "neovision" | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setBrand(
-      window.location.hostname.toLowerCase() === "mbs.iotnect.com"
-        ? "mbs"
-        : "neovision",
-    );
+    const host = window.location.hostname;
+    setBrand(isUmHost(host) ? "um" : host.toLowerCase() === "mbs.iotnect.com" ? "mbs" : "neovision");
   }, []);
 
   const logoSrc =
@@ -37,7 +34,8 @@ export default function LoginPage() {
 
     const authenticatedUser = await login(username.trim(), password);
     if (authenticatedUser) {
-      router.replace(isNeoVisionHost(window.location.hostname) ? "/" : "/camera-status");
+      const host = window.location.hostname;
+      router.replace(isUmHost(host) ? "/um" : isNeoVisionHost(host) ? "/" : "/camera-status");
     } else {
       setError("Invalid username or password");
     }
@@ -62,7 +60,7 @@ export default function LoginPage() {
               <div className="h-[300px] w-[300px]" aria-hidden="true" />
             )}
           </div>
-          <h1 className="text-3xl font-bold text-white">AI Detection System</h1>
+          <h1 className="text-3xl font-bold text-white">{brand === "um" ? "Universiti Malaya" : "AI Detection System"}</h1>
           <p className="text-slate-400 text-lg"></p>
           <p className="text-sm text-slate-500 leading-relaxed">
             
@@ -89,7 +87,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-white">Sign In</h2>
+            <h2 className="text-2xl font-bold text-white">{brand === "um" ? "Sign in to Universiti Malaya" : "Sign In"}</h2>
             <p className="text-slate-400 text-sm mt-1">
               Enter your credentials to access the system
             </p>

@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useHostname } from "@/hooks/useHostname";
-import { isNeoVisionHost } from "@/lib/workspace";
+import { isNeoVisionHost, isUmHost } from "@/lib/workspace";
 
 const menuItems = [
   {
@@ -74,6 +74,7 @@ export default function Sidebar({
   const { user, logout } = useAuth();
   const hostname = useHostname();
   const neoVision = hostname !== null && isNeoVisionHost(hostname);
+  const umClient = hostname !== null && isUmHost(hostname);
 
   const handleLogout = () => {
     onCloseMobile();
@@ -198,7 +199,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        {!demo && <button
+        {(!demo || umClient) && <button
           type="button"
           onClick={handleLogout}
           className={cn(

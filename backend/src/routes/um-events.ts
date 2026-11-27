@@ -10,6 +10,8 @@ interface UmRouteOptions {
   store?: UmEventStore;
 }
 
+const umOrigins = new Set(["https://neovision.iotnect.com", "https://um.iotnect.com"]);
+
 export async function umEventRoutes(app: FastifyInstance, options: UmRouteOptions) {
   app.post("/um/events", { bodyLimit: 16_384 }, async (request, reply) => {
     if (!options.secret || !options.store) return reply.code(503).send({ error: "um_not_configured" });
@@ -35,8 +37,10 @@ export async function umEventRoutes(app: FastifyInstance, options: UmRouteOption
   // UM remains a public presentation workspace. Expose only dashboard-safe fields.
   app.get("/um/events", async (request, reply) => {
     reply.header("Cache-Control", "no-store");
-    if (request.headers.origin !== "https://neovision.iotnect.com") return reply.code(403).send({ error: "origin_not_allowed" });
-    reply.header("Access-Control-Allow-Origin", "https://neovision.iotnect.com");
+    const origin = request.headers.origin;
+    if (!origin || !umOrigins.has(origin)) return reply.code(403).send({ error: "origin_not_allowed" });
+    reply.header("Access-Control-Allow-Origin", origin);
+    reply.header("Vary", "Origin");
     if (!options.secret || !options.store) return reply.code(503).send({ error: "um_not_configured" });
     const query = z.object({ limit: z.coerce.number().int().min(1).max(1000).default(1000) }).strict().safeParse(request.query);
     if (!query.success) return reply.code(400).send({ error: "invalid_query" });
