@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, Maximize2, X } from "lucide-react";
+import { Maximize2, X } from "lucide-react";
 import { umDemo } from "@/lib/um-demo";
 import { UmDisplayLog, UmEventLog, UmWaterLevel } from "./UmDemoData";
+import HlsPlayer from "@/components/cctv/HlsPlayer";
 import UmMap from "@/components/map/UmMap";
 
 type View = "dashboard" | "ai-detection" | "water-level" | "display-log" | "reporting";
@@ -15,28 +16,17 @@ const titles: Record<View, string> = {
   "display-log": "Display Log", reporting: "Reporting",
 };
 
-function DemoVideo({ mode }: { mode: Mode }) {
-  const [failed, setFailed] = useState(false);
-  const src = umDemo.videos[mode];
-  useEffect(() => setFailed(false), [src]);
+const umStreams: Record<Mode, string> = {
+  original: "https://um-flood-edge-01.taila3d0cf.ts.net/channel_0/index.m3u8",
+  ai: "https://um-flood-edge-01.taila3d0cf.ts.net/channel_1/index.m3u8",
+};
 
+function UmLiveVideo({ mode }: { mode: Mode }) {
   return (
-    <div className="relative aspect-video w-full bg-black">
-      {src && !failed ? (
-        <video key={src} src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}`}
-          className="camera-video h-full w-full object-contain" aria-label={`UM ${mode} video`}
-          width={1920} height={1080} autoPlay loop muted playsInline controls={false}
-          onError={() => setFailed(true)} />
-      ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center text-[#cbd5e1]">
-          <Camera size={28} aria-hidden="true" />
-          <p className="text-sm">{failed ? "Video is unavailable." : `Waiting for UM ${mode === "ai" ? "AI" : "original"} live feed.`}</p>
-        </div>
-      )}
-      {src && !failed && <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
-        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-amber-400" />
-        {mode === "ai" ? "AI DEMO REPLAY" : "DEMO REPLAY"}
-      </span>}
+    <div className="aspect-video w-full bg-black">
+      <HlsPlayer key={mode} src={umStreams[mode]} direct onDemand
+        className="h-full w-full object-contain"
+        ariaLabel={mode === "ai" ? "UM AI live feed" : "UM Original live feed"} />
     </div>
   );
 }
@@ -89,7 +79,7 @@ export default function UmWorkspace({ view }: { view: View }) {
             </div>
           </div>
           <article className="relative max-w-3xl overflow-hidden rounded-xl border border-slate-700">
-            {!enlarged && <DemoVideo mode={mode} />}
+            {!enlarged && <UmLiveVideo mode={mode} />}
             {enlarged && <div className="aspect-video bg-black" />}
             <button type="button" onClick={() => setEnlarged(true)} aria-label="Enlarge UM video"
               className="absolute right-3 top-3 rounded-md bg-black/70 p-3 text-white hover:bg-blue-600 active:bg-blue-700 focus-visible:outline-2 focus-visible:outline-blue-400"><Maximize2 size={18} /></button>
@@ -118,7 +108,7 @@ export default function UmWorkspace({ view }: { view: View }) {
         <section>
           <div className="flex items-center justify-between px-4 py-2"><h2 className="font-semibold text-white">{umDemo.cameraName}</h2>
             <button autoFocus type="button" onClick={() => setEnlarged(false)} aria-label="Close enlarged UM video" className="rounded-lg p-3 text-slate-300 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500"><X size={20} /></button></div>
-          <DemoVideo mode={mode} />
+          <UmLiveVideo mode={mode} />
         </section>
       </dialog>}
     </div>

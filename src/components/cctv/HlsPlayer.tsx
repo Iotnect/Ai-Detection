@@ -12,6 +12,7 @@ interface HlsPlayerProps {
   ariaLabel: string;
   targetLatencySeconds?: number;
   onDemand?: boolean;
+  direct?: boolean;
   onClick?: () => void;
   onUnavailable?: () => void;
   onAvailable?: () => void;
@@ -23,6 +24,7 @@ export default function HlsPlayer({
   ariaLabel,
   targetLatencySeconds,
   onDemand = false,
+  direct = false,
   onClick,
   onUnavailable,
   onAvailable,
@@ -96,54 +98,58 @@ export default function HlsPlayer({
       hls?.destroy();
       hls = undefined;
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
-
-      if (!apiUrl) {
-        markUnavailable();
-        return;
-      }
-
       try {
-        const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
+        let playbackUrl = src;
+        if (!direct) {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 
-        if (!streamPath) {
-          markUnavailable();
-          return;
+          if (!apiUrl) {
+            markUnavailable();
+            return;
+          }
+
+          const streamPath = new URL(src).pathname.split("/").filter(Boolean)[0];
+
+          if (!streamPath) {
+            markUnavailable();
+            return;
+          }
+
+          const response = await authenticatedFetch(`${apiUrl}/api/v1/stream-ticket`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ path: streamPath }),
+          });
+          const ticket = (await response.json()) as {
+            token?: string;
+            expiresIn?: number;
+          };
+
+          if (cancelled || currentGeneration !== generation) return;
+
+          if (!response.ok || !ticket.token) {
+            markUnavailable();
+            scheduleReconnect();
+            return;
+          }
+
+          ticketExpiresAt =
+            Date.now() + Math.max(30, ticket.expiresIn ?? 300) * 1000;
+
+          const authorizedUrl = new URL(
+            `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
+            apiUrl,
+          );
+          authorizedUrl.searchParams.set("ticket", ticket.token);
+          playbackUrl = authorizedUrl.href;
+
+          nativeRefreshTimer = setTimeout(
+            () => void attach(),
+            Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
+          );
         }
-
-        const response = await authenticatedFetch(`${apiUrl}/api/v1/stream-ticket`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ path: streamPath }),
-        });
-        const ticket = (await response.json()) as {
-          token?: string;
-          expiresIn?: number;
-        };
-
-        if (cancelled || currentGeneration !== generation) return;
-
-        if (!response.ok || !ticket.token) {
-          markUnavailable();
-          scheduleReconnect();
-          return;
-        }
-
-        ticketExpiresAt =
-          Date.now() + Math.max(30, ticket.expiresIn ?? 300) * 1000;
-
-        const playbackUrl = new URL(
-          `/api/v1/hls/${encodeURIComponent(streamPath)}/index.m3u8`,
-          apiUrl,
-        );
-        playbackUrl.searchParams.set("ticket", ticket.token);
-
-        nativeRefreshTimer = setTimeout(
-          () => void attach(),
-          Math.max(30, (ticket.expiresIn ?? 300) - 30) * 1000,
-        );
 
         if (Hls.isSupported()) {
           const player = new Hls(
@@ -164,7 +170,7 @@ export default function HlsPlayer({
                 },
           );
           hls = player;
-          player.loadSource(playbackUrl.toString());
+          player.loadSource(playbackUrl);
           player.attachMedia(video);
           player.on(Hls.Events.MANIFEST_PARSED, () => {
             if (hls !== player) return;
@@ -205,7 +211,7 @@ export default function HlsPlayer({
         }
 
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = playbackUrl.toString();
+          video.src = playbackUrl;
           void video.play().catch(() => undefined);
           return;
         }
@@ -265,7 +271,7 @@ export default function HlsPlayer({
       // Recreate it with a fresh ticket instead of trying to resume stale HLS
       // state. Keep very short tab switches instant.
       const ticketNeedsRefresh =
-        ticketExpiresAt === 0 || Date.now() >= ticketExpiresAt - 30_000;
+        !direct && (ticketExpiresAt === 0 || Date.now() >= ticketExpiresAt - 30_000);
       const backgroundPlaybackIsStale = hiddenFor >= 15_000;
 
       if (ticketNeedsRefresh || backgroundPlaybackIsStale) {
@@ -305,7 +311,7 @@ export default function HlsPlayer({
       video.removeEventListener("stalled", handleStalled);
       stopPlayer();
     };
-  }, [src, targetLatencySeconds, onDemand, onUnavailable, onAvailable]);
+  }, [src, targetLatencySeconds, onDemand, direct, onUnavailable, onAvailable]);
 
   return (
     <div className="relative h-full w-full bg-black">
